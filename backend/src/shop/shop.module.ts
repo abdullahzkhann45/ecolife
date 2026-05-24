@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ShopItem } from './shop-item.entity';
-import { Inventory } from './inventory.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ShopItem, ShopItemSchema } from './shop-item.schema';
+import { Inventory, InventorySchema } from './inventory.schema';
 import { ShopService } from './shop.service';
 import { ShopController } from './shop.controller';
 import { PointsModule } from '../points/points.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ShopItem, Inventory]), PointsModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: ShopItem.name, schema: ShopItemSchema },
+      { name: Inventory.name, schema: InventorySchema },
+    ]),
+    PointsModule,
+  ],
   providers: [ShopService],
   controllers: [ShopController],
 })

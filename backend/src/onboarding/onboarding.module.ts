@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { OnboardingResponse } from './onboarding-response.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { OnboardingResponse, OnboardingResponseSchema } from './onboarding-response.schema';
+import { User, UserSchema } from '../users/user.schema';
+import { Task, TaskSchema } from '../tasks/task.schema';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingController } from './onboarding.controller';
-import { User } from '../users/user.entity';
-import { Task } from '../tasks/task.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OnboardingResponse, User, Task])],
+  imports: [MongooseModule.forFeature([
+    { name: OnboardingResponse.name, schema: OnboardingResponseSchema },
+    { name: User.name, schema: UserSchema },
+    { name: Task.name, schema: TaskSchema },
+  ])],
   providers: [OnboardingService],
   controllers: [OnboardingController],
 })

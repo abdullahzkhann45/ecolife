@@ -7,46 +7,36 @@ const CATEGORY_INFO: Record<string, { glyph: string; label: string }> = {
   transport: { glyph: '↗', label: 'Transport' },
   diet: { glyph: '◍', label: 'Diet' },
   energy: { glyph: '⚡', label: 'Energy' },
+  water: { glyph: '💧', label: 'Water' },
   waste: { glyph: '↻', label: 'Waste' },
   consumption: { glyph: '◊', label: 'Consumption' },
 };
 
 export default function EcoScorePage() {
   const [score, setScore] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [showMethodology, setShowMethodology] = useState(false);
 
   useEffect(() => {
     api.get('/eco-score').then(res => setScore(res.data));
+    api.get('/activity/history').then(res => setHistory(res.data.slice(-14))).catch(() => {});
   }, []);
 
-  if (!score) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '128px 0' }}>
-        <div className="spinner" />
-      </div>
-    );
-  }
+  if (!score) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '128px 0' }}><div className="spinner" /></div>;
 
   const R = 44, C = 2 * Math.PI * R;
   const dash = `${C * (score.currentScore / 1000)} ${C}`;
   const improved = score.improvement >= 0;
-  const tier = score.currentScore >= 700 ? 'Champion'
-              : score.currentScore >= 500 ? 'Above average'
-              : score.currentScore >= 300 ? 'On the rise'
-              : 'Getting started';
+  const tier = score.currentScore >= 700 ? 'Champion' : score.currentScore >= 500 ? 'Above average' : score.currentScore >= 300 ? 'On the rise' : 'Getting started';
 
   return (
     <div>
       <div className="page-head fade-up">
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>§ 03 — Eco score</div>
-          <h1>
-            One number,<br /><em>all of it</em>.
-          </h1>
+          <h1>One number,<br /><em>all of it</em>.</h1>
         </div>
-        <p className="page-sub">
-          A weighted sum of category sub-scores over a rolling 30-day window, calibrated against published lifestyle CO₂e estimates.
-        </p>
+        <p className="page-sub">Baseline (30%) + Activity (50%) + Commitment (20%). Pakistan-weighted. Rolling 30-day window.</p>
       </div>
 
       {/* Score + categories grid */}
@@ -54,27 +44,13 @@ export default function EcoScorePage() {
         <div style={{ position: 'relative', aspectRatio: '1 / 1', maxWidth: 480, margin: '0 auto', width: '100%' }} className="fade-up">
           <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
             <circle cx="50" cy="50" r={R} fill="none" stroke="var(--paper-deep)" strokeWidth="6" />
-            <circle
-              cx="50" cy="50" r={R} fill="none"
-              stroke="var(--ink)" strokeWidth="6" strokeLinecap="round"
-              strokeDasharray={dash}
-              style={{ transition: 'stroke-dasharray 1.4s cubic-bezier(0.3,0.7,0.2,1)' }}
-            />
+            <circle cx="50" cy="50" r={R} fill="none" stroke="var(--ink)" strokeWidth="6" strokeLinecap="round" strokeDasharray={dash} style={{ transition: 'stroke-dasharray 1.4s cubic-bezier(0.3,0.7,0.2,1)' }} />
           </svg>
-          <div style={{
-            position: 'absolute', inset: 0, display: 'flex',
-            flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-          }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             <div className="eyebrow" style={{ marginBottom: 8 }}>your score</div>
-            <div className="display" style={{ fontSize: 'clamp(80px, 14vw, 160px)', lineHeight: 1 }}>
-              {score.currentScore}
-            </div>
+            <div className="display" style={{ fontSize: 'clamp(80px, 14vw, 160px)', lineHeight: 1 }}>{score.currentScore}</div>
             <div className="eyebrow" style={{ marginTop: 8 }}>/ 1000 · {tier}</div>
-            <div style={{
-              marginTop: 14, fontFamily: 'var(--mono)', fontSize: 12,
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: improved ? 'var(--leaf)' : 'var(--danger)',
-            }}>
+            <div style={{ marginTop: 14, fontFamily: 'var(--mono)', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: improved ? 'var(--leaf)' : 'var(--danger)' }}>
               {improved ? '↑' : '↓'} {Math.abs(score.improvement)} from baseline
             </div>
           </div>
@@ -87,60 +63,51 @@ export default function EcoScorePage() {
             return (
               <div key={cat}>
                 <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr auto', gap: 14, alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 8,
-                    background: 'var(--ink)', color: 'var(--paper)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700,
-                  }}>{info.glyph}</div>
-                  <div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>
-                      {info.label}
-                    </div>
-                  </div>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--ink)', color: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700 }}>{info.glyph}</div>
+                  <div style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em' }}>{info.label}</div>
                   <div className="display" style={{ fontSize: 32 }}>{val}</div>
                 </div>
-                <div className="bar-track">
-                  <div className={`bar-fill ${color}`} style={{ width: `${val / 10}%` }} />
-                </div>
+                <div className="bar-track"><div className={`bar-fill ${color}`} style={{ width: `${val / 10}%` }} /></div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Sub-cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18, marginBottom: 48 }} className="stagger">
-        <div className="stat-tile">
-          <div className="label">Baseline score</div>
-          <div className="value" style={{ fontSize: 48 }}>{score.baselineScore}</div>
-          <div className="sub">Day-1 assessment</div>
+      {/* Score components */}
+      {score.components && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 48 }} className="stagger">
+          <div className="stat-tile"><div className="label">Baseline</div><div className="value" style={{ fontSize: 48 }}>{score.components.baseline}<span className="unit">/ 300</span></div><div className="sub">From questionnaire</div></div>
+          <div className="stat-tile leaf"><div className="label">Activity</div><div className="value" style={{ fontSize: 48 }}>{score.components.activity}<span className="unit">/ 500</span></div><div className="sub">30-day task completions</div></div>
+          <div className="stat-tile accent"><div className="label">Commitment</div><div className="value" style={{ fontSize: 48 }}>{score.components.commitment}<span className="unit">/ 200</span></div><div className="sub">7-day completion rate</div></div>
         </div>
-        <div className="stat-tile leaf">
-          <div className="label">Tasks · 30 days</div>
-          <div className="value" style={{ fontSize: 48 }}>{score.tasksCompletedLast30Days}</div>
-          <div className="sub">Verified completions</div>
-        </div>
-        <div className="stat-tile accent">
-          <div className="label">Tier</div>
-          <div className="value" style={{ fontSize: 36 }}>{tier}</div>
-          <div className="sub">{score.currentScore >= 700 ? 'Top 10% of users' : 'Climb to Champion'}</div>
-        </div>
-      </div>
+      )}
 
-      {/* Methodology + motivation */}
+      {/* Score history */}
+      {history.length > 0 && (
+        <div className="eco-card" style={{ marginBottom: 48, padding: 28 }}>
+          <div className="eyebrow" style={{ marginBottom: 18 }}>§ Score history · last {history.length} days</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
+            {history.map((h, i) => {
+              const pct = (h.ecoScore / 1000) * 100;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--mute)' }}>{h.ecoScore}</div>
+                  <div style={{ width: '100%', height: `${pct}%`, background: 'var(--ink)', borderRadius: 4, minHeight: 4, transition: 'height 0.4s' }} />
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 7, color: 'var(--mute)' }}>{h.date.slice(5)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Stats + methodology */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
         <div className="eco-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
             <div className="eyebrow">§ Methodology</div>
-            <button
-              onClick={() => setShowMethodology(!showMethodology)}
-              style={{
-                background: 'transparent', border: 0, cursor: 'pointer',
-                fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em',
-                textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 500,
-              }}
-            >
+            <button onClick={() => setShowMethodology(!showMethodology)} style={{ background: 'transparent', border: 0, cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 500 }}>
               {showMethodology ? 'hide' : 'show'}
             </button>
           </div>
@@ -148,33 +115,22 @@ export default function EcoScorePage() {
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{score.methodology}</p>
           ) : (
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--mute)' }}>
-              Six category sub-scores. Rolling 30-day window. Calibrated against published CO₂e estimates so the number means something real.
+              Six category sub-scores. Pakistan-weighted baseline. Three components: Baseline (30%), Activity (50%), Commitment (20%).
             </p>
           )}
         </div>
-
         <div className="eco-card ink">
           <div className="eyebrow" style={{ marginBottom: 14, color: 'rgba(239,233,215,0.6)' }}>§ Where you stand</div>
           <p className="display" style={{ fontSize: 32, color: 'var(--paper)', marginBottom: 14 }}>
-            {score.currentScore >= 700 ? <>You&apos;re a <em>Champion</em>.</>
-             : score.currentScore >= 500 ? <>Solid <em>progress</em>.</>
-             : <>Every <em>action</em> counts.</>}
+            {score.currentScore >= 700 ? <>You&apos;re a <em>Champion</em>.</> : score.currentScore >= 500 ? <>Solid <em>progress</em>.</> : <>Every <em>action</em> counts.</>}
           </p>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(239,233,215,0.65)' }}>
-            {score.currentScore >= 700
-              ? 'You\'re in the top tier. Keep the streak alive and you stay there.'
-              : score.currentScore >= 500
-              ? 'Above the average user. Complete more tasks to push into Champion territory.'
-              : 'Start today. Small actions compound into a real score.'}
+            {score.currentScore >= 700 ? "Top tier. Keep the streak alive." : score.currentScore >= 500 ? "Above average. Push into Champion territory." : "Start today. Small actions compound."}
           </p>
         </div>
       </div>
 
-      <style jsx>{`
-        @media (max-width: 900px) {
-          .score-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-        }
-      `}</style>
+      <style jsx>{`@media (max-width: 900px) { .score-grid { grid-template-columns: 1fr !important; gap: 40px !important; } }`}</style>
     </div>
   );
 }

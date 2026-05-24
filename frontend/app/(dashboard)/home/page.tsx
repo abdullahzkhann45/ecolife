@@ -6,7 +6,7 @@ import api from '@/lib/api';
 import Link from 'next/link';
 
 const CATEGORY_GLYPH: Record<string, string> = {
-  transport: '↗', diet: '◍', energy: '⚡', waste: '↻', consumption: '◊',
+  transport: '↗', diet: '◍', energy: '⚡', water: '💧', waste: '↻', consumption: '◊',
 };
 
 export default function HomePage() {
@@ -16,6 +16,7 @@ export default function HomePage() {
   const [ecoScore, setEcoScore] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [commitProgress, setCommitProgress] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
@@ -23,11 +24,13 @@ export default function HomePage() {
       api.get('/points'),
       api.get('/eco-score'),
       api.get('/tasks/today'),
-    ]).then(([s, p, e, t]) => {
+      api.get('/tasks/commitment-progress'),
+    ]).then(([s, p, e, t, cp]) => {
       setStreak(s.data);
       setPoints(p.data);
       setEcoScore(e.data);
       setTasks(t.data.slice(0, 6));
+      setCommitProgress(cp.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -174,6 +177,19 @@ export default function HomePage() {
 
         {/* Sidebar */}
         <aside style={{ display: 'grid', gap: 18 }} className="stagger">
+          {commitProgress && commitProgress.tasksCommitted > 0 && (
+            <div className="eco-card" style={{ padding: '22px 24px' }}>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>§ Commitments</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                <span className="display" style={{ fontSize: 42, color: 'var(--accent)' }}>{commitProgress.tasksCompletedToday}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--mute)' }}>/ {commitProgress.tasksCommitted} done today</span>
+              </div>
+              <div className="bar-track" style={{ marginBottom: 10 }}>
+                <div className="bar-fill accent" style={{ width: `${commitProgress.completionRate * 100}%` }} />
+              </div>
+              <div className="eyebrow">Projected +{commitProgress.projectedScoreImprovement} score/day</div>
+            </div>
+          )}
           {streak && streak.currentStreak > 0 && (
             <div className="eco-card ink" style={{ overflow: 'hidden' }}>
               <div className="eyebrow" style={{ marginBottom: 14 }}>§ Streak alive</div>

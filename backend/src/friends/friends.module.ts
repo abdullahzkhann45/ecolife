@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Friendship } from './friendship.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Friendship, FriendshipSchema } from './friendship.schema';
+import { User, UserSchema } from '../users/user.schema';
+import { PointsLedger, PointsLedgerSchema } from '../points/points-ledger.schema';
 import { FriendsService } from './friends.service';
 import { FriendsController } from './friends.controller';
-import { User } from '../users/user.entity';
-import { PointsLedger } from '../points/points-ledger.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Friendship, User, PointsLedger])],
+  imports: [MongooseModule.forFeature([
+    { name: Friendship.name, schema: FriendshipSchema },
+    { name: User.name, schema: UserSchema },
+    { name: PointsLedger.name, schema: PointsLedgerSchema },
+  ])],
   providers: [FriendsService],
   controllers: [FriendsController],
 })

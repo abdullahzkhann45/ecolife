@@ -4,6 +4,39 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import api from '@/lib/api';
 
+function PrivacyCard() {
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState<number | null>(null);
+
+  const handleDelete = async () => {
+    if (!confirm('This will permanently erase all your GPS route data. Are you sure?')) return;
+    setDeleting(true);
+    try {
+      const res = await api.delete('/users/me/gps-data');
+      setDeleted(res.data.deleted);
+    } catch {}
+    setDeleting(false);
+  };
+
+  return (
+    <div className="eco-card">
+      <div className="eyebrow" style={{ marginBottom: 12 }}>§ Privacy</div>
+      <p style={{ fontSize: 13, color: 'var(--mute)', marginBottom: 14, lineHeight: 1.6 }}>
+        We record your route only during active tasks. Raw GPS data is automatically deleted within 7 days.
+        Only summary stats are kept. We never sell or share your location data.
+      </p>
+      {deleted !== null ? (
+        <div className="notice" style={{ fontSize: 13 }}>Cleared {deleted} GPS session(s).</div>
+      ) : (
+        <button onClick={handleDelete} disabled={deleting}
+          className="btn btn-danger" style={{ width: '100%', height: 38, fontSize: 12 }}>
+          {deleting ? 'Deleting...' : 'Delete my GPS data'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const [streak, setStreak] = useState<any>(null);
@@ -124,6 +157,36 @@ export default function ProfilePage() {
               </p>
             </div>
           )}
+
+          <div className="eco-card">
+            <div className="eyebrow" style={{ marginBottom: 12 }}>§ Download report</div>
+            <p style={{ fontSize: 13, color: 'var(--mute)', marginBottom: 14, lineHeight: 1.5 }}>
+              Export your activity history as CSV — score trajectory, daily completions, and environmental impact.
+            </p>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {[
+                { label: 'Past 24 hours', days: 1 },
+                { label: 'Past 3 days', days: 3 },
+                { label: 'Past 7 days', days: 7 },
+              ].map(opt => (
+                <button
+                  key={opt.days}
+                  onClick={() => {
+                    const token = localStorage.getItem('ecolife_token');
+                    const end = new Date().toISOString().slice(0, 10);
+                    const start = new Date(Date.now() - opt.days * 86400000).toISOString().slice(0, 10);
+                    window.open(`http://localhost:3001/api/activity/report?start=${start}&end=${end}&token=${token}`, '_blank');
+                  }}
+                  className="btn btn-accent"
+                  style={{ width: '100%', height: 40, fontSize: 13 }}
+                >
+                  {opt.label} (CSV)
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <PrivacyCard />
 
           <div className="eco-card">
             <div className="eyebrow" style={{ marginBottom: 12 }}>§ Account</div>

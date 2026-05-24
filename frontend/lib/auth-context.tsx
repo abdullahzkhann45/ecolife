@@ -9,6 +9,9 @@ interface User {
   email: string;
   username: string;
   onboardingCompleted: boolean;
+  role: string;
+  gpsConsentShown: boolean;
+  createdAt?: string;
 }
 
 interface AuthContextType {

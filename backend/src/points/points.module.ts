@@ -1,13 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { PointsLedger } from './points-ledger.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { PointsLedger, PointsLedgerSchema } from './points-ledger.schema';
 import { PointsService } from './points.service';
 import { PointsController } from './points.controller';
 import { StreaksModule } from '../streaks/streaks.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PointsLedger]),
+    MongooseModule.forFeature([{ name: PointsLedger.name, schema: PointsLedgerSchema }]),
     forwardRef(() => StreaksModule),
   ],
   providers: [PointsService],

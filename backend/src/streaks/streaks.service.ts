@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Streak } from './streak.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Streak, StreakDocument } from './streak.schema';
 
 const MILESTONE_STREAKS = [7, 14, 30, 60, 100, 365];
 const MILESTONE_BONUS = { 7: 100, 14: 200, 30: 500, 60: 800, 100: 1500, 365: 5000 };
@@ -9,15 +9,13 @@ const MILESTONE_BONUS = { 7: 100, 14: 200, 30: 500, 60: 800, 100: 1500, 365: 500
 @Injectable()
 export class StreaksService {
   constructor(
-    @InjectRepository(Streak)
-    private repo: Repository<Streak>,
+    @InjectModel(Streak.name) private streakModel: Model<StreakDocument>,
   ) {}
 
   async getStreak(userId: string) {
-    let streak = await this.repo.findOne({ where: { userId } });
+    let streak = await this.streakModel.findOne({ userId });
     if (!streak) {
-      streak = this.repo.create({ userId });
-      await this.repo.save(streak);
+      streak = await this.streakModel.create({ userId });
     }
     return streak;
   }
@@ -34,7 +32,6 @@ export class StreaksService {
     if (streak.lastCompletedDate === yesterday || streak.currentStreak === 0) {
       streak.currentStreak += 1;
     } else {
-      // Handle streak freeze
       if (!streak.freezeUsedThisPeriod) {
         streak.freezeUsedThisPeriod = true;
         streak.currentStreak += 1;
@@ -48,14 +45,13 @@ export class StreaksService {
       streak.longestStreak = streak.currentStreak;
     }
 
-    // Check monthly freeze reset
     const freezeStart = streak.freezePeriodStart ? new Date(streak.freezePeriodStart) : null;
     if (!freezeStart || Date.now() - freezeStart.getTime() > 30 * 86400000) {
       streak.freezeUsedThisPeriod = false;
       streak.freezePeriodStart = today;
     }
 
-    await this.repo.save(streak);
+    await streak.save();
 
     let milestoneReached: number | null = null;
     let bonusPoints = 0;

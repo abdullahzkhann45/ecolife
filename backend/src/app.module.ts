@@ -1,8 +1,7 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module, Logger } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
@@ -12,31 +11,33 @@ import { StreaksModule } from './streaks/streaks.module';
 import { PointsModule } from './points/points.module';
 import { FriendsModule } from './friends/friends.module';
 import { ShopModule } from './shop/shop.module';
-
-const DB_PATH = 'ecolife.db';
-
-function loadDatabase(): Uint8Array | undefined {
-  if (existsSync(DB_PATH)) {
-    return new Uint8Array(readFileSync(DB_PATH));
-  }
-  return undefined;
-}
+import { ActivityModule } from './activity/activity.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'sqljs',
-      database: loadDatabase(),
-      location: DB_PATH,
-      autoSave: true,
-      autoSaveCallback: (db: Uint8Array) => {
-        writeFileSync(DB_PATH, Buffer.from(db));
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const uri = config.get<string>('MONGODB_URI');
+        const logger = new Logger('MongooseModule');
+        if (!uri) {
+          logger.error('MONGODB_URI is not set in environment variables!');
+          throw new Error('MONGODB_URI environment variable is required');
+        }
+        logger.log('Connecting to MongoDB Atlas...');
+        return {
+          uri,
+          connectionFactory: (connection) => {
+            connection.on('connected', () => logger.log('Connected to MongoDB Atlas'));
+            connection.on('error', (err) => logger.error('MongoDB connection error:', err.message));
+            return connection;
+          },
+        };
       },
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
-      logging: false,
-    } as any),
+      inject: [ConfigService],
+    }),
     ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
@@ -47,6 +48,8 @@ function loadDatabase(): Uint8Array | undefined {
     PointsModule,
     FriendsModule,
     ShopModule,
+    ActivityModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

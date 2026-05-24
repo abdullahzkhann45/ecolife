@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Streak } from './streak.entity';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Streak, StreakSchema } from './streak.schema';
 import { StreaksService } from './streaks.service';
 import { StreaksController } from './streaks.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Streak])],
+  imports: [MongooseModule.forFeature([{ name: Streak.name, schema: StreakSchema }])],
   providers: [StreaksService],
   controllers: [StreaksController],
   exports: [StreaksService],
