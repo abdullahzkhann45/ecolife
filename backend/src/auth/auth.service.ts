@@ -15,24 +15,32 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
+    const username = dto.username.trim().toLowerCase();
+
     const existing = await this.userModel.findOne({
-      $or: [{ email: dto.email }, { username: dto.username }],
+      $or: [{ email }, { username }],
     });
     if (existing) throw new ConflictException('Email or username already in use');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = await this.userModel.create({ ...dto, passwordHash });
+    const user = await this.userModel.create({ email, username, passwordHash });
+    console.log('[AUTH] Registered user:', user.email, 'hash length:', user.passwordHash?.length);
 
     return this.signToken(user);
   }
 
   async login(dto: LoginDto) {
+    const input = dto.emailOrUsername.trim().toLowerCase();
+
     const user = await this.userModel.findOne({
-      $or: [{ email: dto.emailOrUsername }, { username: dto.emailOrUsername }],
+      $or: [{ email: input }, { username: input }],
     });
+    console.log('[AUTH] Login attempt:', input, 'found:', !!user, 'hasHash:', !!user?.passwordHash);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    console.log('[AUTH] Password compare result:', valid);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     return this.signToken(user);
