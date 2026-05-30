@@ -174,18 +174,22 @@ export class TasksService implements OnModuleInit {
       if (task) completedByCategory.set(task.category, (completedByCategory.get(task.category) || 0) + 1);
     }
 
-    const matched = tasks.filter(task => {
+    const specificMatched = tasks.filter(task => {
       const lifestyles = this.parseJsonArray(task.lifestyleTypes, ['all']);
       const tags = this.parseJsonArray(task.taskTags, ['all']);
       const difficulty = this.getTaskPersonalization(task.title)?.difficulty || 1;
       const unlockedLevel = Math.min(3, 1 + Math.floor((completedByCategory.get(task.category) || 0) / 2));
       const lifestyleMatch = lifestyles.includes('all') || lifestyles.includes(profile.lifestyleType);
-      const tagMatch = tags.includes('all') || tags.some(tag => profile.tags.has(tag));
+      const tagMatch = !tags.includes('all') && tags.some(tag => profile.tags.has(tag));
       return lifestyleMatch && tagMatch && difficulty <= unlockedLevel;
     });
 
-    const fallback = tasks.filter(t => this.parseJsonArray(t.taskTags, ['all']).includes('all')).concat(matched);
-    return matched.length >= 5 ? matched : this.uniqueTasks(fallback);
+    const genericFallback = tasks.filter(task => {
+      const lifestyles = this.parseJsonArray(task.lifestyleTypes, ['all']);
+      const tags = this.parseJsonArray(task.taskTags, ['all']);
+      return tags.includes('all') && (lifestyles.includes('all') || lifestyles.includes(profile.lifestyleType));
+    });
+    return specificMatched.length >= 5 ? specificMatched : this.uniqueTasks(specificMatched.concat(genericFallback));
   }
 
   private buildTaskProfile(answers: Record<string, string>, lifestyleType?: string | null) {
@@ -531,9 +535,9 @@ export class TasksService implements OnModuleInit {
     const completedTodayIds = new Set(todaySubmissions.map(s => s.taskId.toString()));
 
     const committedTasks = commitments.map(c => ({
-      taskId: c.taskId.toString(),
+      taskId: ((c.taskId as any)?._id || c.taskId).toString(),
       title: (c.taskId as any)?.title,
-      completedToday: completedTodayIds.has(c.taskId.toString()),
+      completedToday: completedTodayIds.has(((c.taskId as any)?._id || c.taskId).toString()),
     }));
 
     const tasksCommitted = commitments.length;

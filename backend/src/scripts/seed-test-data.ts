@@ -101,7 +101,7 @@ function taskPoolFor(profile: any, lifestyleType: string, tasks: any[]) {
     let lifestyles = ['all'];
     try { lifestyles = JSON.parse(task.lifestyleTypes || '["all"]'); } catch {}
     const lifestyleMatch = lifestyles.includes('all') || lifestyles.includes(lifestyleType);
-    const tagMatch = taskTags.includes('all') || taskTags.some((tag: string) => tags.has(tag));
+    const tagMatch = !taskTags.includes('all') && taskTags.some((tag: string) => tags.has(tag));
     return lifestyleMatch && tagMatch;
   });
   return matched.length >= 7 ? matched : matched.concat(tasks.filter(t => parseTags(t).includes('all')));
