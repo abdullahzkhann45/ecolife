@@ -5,6 +5,7 @@ import { Task, TaskDocument, TaskCategory, VerificationMechanism } from './task.
 import { TaskSubmission, TaskSubmissionDocument, SubmissionStatus } from './task-submission.schema';
 import { TaskCommitment, TaskCommitmentDocument } from './task-commitment.schema';
 import { GpsSession, GpsSessionDocument } from './gps-session.schema';
+import { OnboardingResponse, OnboardingResponseDocument } from '../onboarding/onboarding-response.schema';
 import { PointsService } from '../points/points.service';
 import { StreaksService } from '../streaks/streaks.service';
 import { GeminiVerifyService } from './gemini-verify.service';
@@ -14,7 +15,7 @@ import { GPSPoint, GPSVerdict, TaskTransportType } from './gps-pipeline.types';
 const MAX_COMMITMENTS = 10;
 const MAX_SELF_RATING_PER_DAY = 5;
 
-const SEED_TASKS = [
+export const SEED_TASKS = [
   // TRANSPORT (5)
   { title: 'Walk or cycle for a short errand', description: 'Skip the bike/rickshaw for a nearby errand — walk or cycle instead. Start GPS tracking when you leave and stop when you arrive.', category: TaskCategory.TRANSPORT, verificationMechanism: VerificationMechanism.GEO, selfRatingEnabled: false, basePoints: 80, co2SavedGrams: 1200, proofInstructions: 'Start GPS tracking before you leave. Walk or cycle to your destination. Stop tracking when you arrive. The system will verify your speed and distance.', lifestyleTypes: JSON.stringify(['all']) },
   { title: 'Take the bus, Metro, or BRT', description: 'Use public transport instead of a private vehicle for your commute. Track your trip with GPS to verify.', category: TaskCategory.TRANSPORT, verificationMechanism: VerificationMechanism.GEO, selfRatingEnabled: false, basePoints: 100, co2SavedGrams: 1800, proofInstructions: 'Start GPS tracking when you board. The system will detect public transport speed patterns and verify your trip distance.', lifestyleTypes: JSON.stringify(['urban_affluent', 'urban_middle', 'semi_urban']) },
@@ -53,6 +54,39 @@ const SEED_TASKS = [
   { title: 'Plant or water one tree or plant today', description: 'Plant a new sapling or water an existing tree/plant. Every bit of green helps.', category: TaskCategory.CONSUMPTION, verificationMechanism: VerificationMechanism.PHOTO, basePoints: 70, co2SavedGrams: 100, proofInstructions: 'Photo of newly planted sapling or plant being watered.', lifestyleTypes: JSON.stringify(['all']), geminiPromptHint: 'Look for a sapling being planted or a plant/tree being watered.' },
 ];
 
+export const TASK_PERSONALIZATION: Record<string, { tags: string[]; difficulty: number; lifestyles?: string[] }> = {
+  'Walk or cycle for a short errand': { tags: ['drives_regularly', 'short_commute', 'market_shopper'], difficulty: 1 },
+  'Take the bus, Metro, or BRT': { tags: ['urban', 'long_commute', 'drives_regularly'], difficulty: 1, lifestyles: ['urban_affluent', 'urban_middle', 'semi_urban'] },
+  'Carpool or share a ride': { tags: ['drives_regularly', 'long_commute', 'urban'], difficulty: 2 },
+  'Use CNG instead of petrol today': { tags: ['drives_regularly', 'car_owner'], difficulty: 2, lifestyles: ['urban_affluent', 'urban_middle'] },
+  'Work or study from home today': { tags: ['office_worker', 'student', 'long_commute'], difficulty: 2, lifestyles: ['urban_affluent', 'urban_middle'] },
+  'Cook a daal/sabzi meal — no meat today': { tags: ['meat_eater', 'cooks_at_home'], difficulty: 1 },
+  'Shop at your local kirana or sabzi mandi': { tags: ['cooks_at_home', 'market_shopper', 'supermarket_shopper'], difficulty: 1 },
+  'Make chai with a reusable cup — skip disposable': { tags: ['all'], difficulty: 1 },
+  'Pack a homemade lunch instead of ordering': { tags: ['orders_food', 'student', 'office_worker', 'cooks_at_home'], difficulty: 2, lifestyles: ['urban_affluent', 'urban_middle'] },
+  'Cook a fully plant-based dinner for the family': { tags: ['meat_eater', 'cooks_at_home', 'family_home'], difficulty: 3 },
+  'Turn off AC/cooler for 2 hours during peak time': { tags: ['uses_ac', 'uses_cooler'], difficulty: 1, lifestyles: ['urban_affluent', 'urban_middle'] },
+  'Unplug UPS/chargers when not in load-shedding': { tags: ['has_ups', 'urban', 'semi_urban'], difficulty: 1 },
+  'Use natural light — keep lights off until Maghrib': { tags: ['all'], difficulty: 1 },
+  'Turn off geyser right after use': { tags: ['urban', 'family_home'], difficulty: 2, lifestyles: ['urban_affluent', 'urban_middle', 'semi_urban'] },
+  'Dry clothes on the line instead of a dryer': { tags: ['family_home', 'apartment', 'rural'], difficulty: 1 },
+  'Use a clay matka instead of electric water cooler': { tags: ['uses_water_cooler', 'buys_bottled_water', 'family_home'], difficulty: 2 },
+  'Refill a steel dabbah or glass bottle from filter': { tags: ['buys_bottled_water', 'urban', 'student'], difficulty: 1 },
+  'Take a bucket bath instead of a shower': { tags: ['all'], difficulty: 1 },
+  'Reuse wudu or kitchen water for plants': { tags: ['has_plants', 'garden', 'cooks_at_home'], difficulty: 2 },
+  'Fix a leaky tap or report one in your building': { tags: ['apartment', 'family_home', 'hostel'], difficulty: 2 },
+  'Separate paper, plastic, and metal for kabari wala': { tags: ['no_recycling', 'some_recycling', 'family_home'], difficulty: 1 },
+  'Start a kitchen compost container': { tags: ['cooks_at_home', 'garden', 'some_recycling', 'already_recycles'], difficulty: 2 },
+  'Pick up litter in your gali or street': { tags: ['rural', 'semi_urban', 'no_recycling'], difficulty: 2 },
+  'Donate old clothes or items instead of trashing': { tags: ['frequent_shopper', 'family_home'], difficulty: 2 },
+  'Refuse a plastic shopping bag — use your own': { tags: ['market_shopper', 'supermarket_shopper', 'frequent_shopper'], difficulty: 1 },
+  'Carry a cloth thaila/jhola to the bazaar': { tags: ['market_shopper', 'supermarket_shopper', 'cooks_at_home'], difficulty: 1 },
+  'Switch to a traditional sabun bar (bar soap)': { tags: ['all'], difficulty: 1 },
+  'Buy from landa bazaar instead of new': { tags: ['frequent_shopper', 'mall_shopper', 'urban'], difficulty: 2, lifestyles: ['urban_affluent', 'urban_middle', 'semi_urban'] },
+  'Repair something instead of replacing it': { tags: ['frequent_shopper', 'minimal_shopper', 'family_home'], difficulty: 3 },
+  'Plant or water one tree or plant today': { tags: ['garden', 'rural', 'semi_urban', 'has_plants'], difficulty: 1 },
+};
+
 @Injectable()
 export class TasksService implements OnModuleInit {
   constructor(
@@ -60,6 +94,7 @@ export class TasksService implements OnModuleInit {
     @InjectModel(TaskSubmission.name) private submissionModel: Model<TaskSubmissionDocument>,
     @InjectModel(TaskCommitment.name) private commitmentModel: Model<TaskCommitmentDocument>,
     @InjectModel(GpsSession.name) private gpsSessionModel: Model<GpsSessionDocument>,
+    @InjectModel(OnboardingResponse.name) private onboardingModel: Model<OnboardingResponseDocument>,
     private pointsService: PointsService,
     private streaksService: StreaksService,
     private geminiVerify: GeminiVerifyService,
@@ -69,13 +104,14 @@ export class TasksService implements OnModuleInit {
   async onModuleInit() {
     const count = await this.taskModel.countDocuments();
     if (count === 0) {
-      await this.taskModel.insertMany(SEED_TASKS);
+      await this.taskModel.insertMany(this.withPersonalization(SEED_TASKS));
       console.log('Seeded 30 Pakistan-specific tasks');
     }
+    await this.backfillTaskPersonalization();
   }
 
   async getTodaysTasks(userId: string) {
-    const tasks = await this.taskModel.find({ isActive: true });
+    const tasks = await this.getPersonalizedTaskPool(userId);
     const today = new Date().toISOString().slice(0, 10);
     const todaySubmissions = await this.submissionModel.find({ userId });
     const completedTodayIds = new Set(
@@ -87,12 +123,193 @@ export class TasksService implements OnModuleInit {
     const commitments = await this.commitmentModel.find({ userId, isActive: true });
     const committedIds = new Set(commitments.map(c => c.taskId.toString()));
 
-    return tasks.map(t => ({
+    const available = tasks.filter(t => !completedTodayIds.has(t._id.toString()));
+    const daily = this.pickDailyTasks(available, userId, today);
+
+    return daily.map(t => ({
       ...t.toObject(),
       id: t._id.toString(),
       completedToday: completedTodayIds.has(t._id.toString()),
       committed: committedIds.has(t._id.toString()),
     }));
+  }
+
+  private withPersonalization(tasks: any[]) {
+    return tasks.map(task => {
+      const config = this.getTaskPersonalization(task.title);
+      if (!config) return task;
+      return {
+        ...task,
+        lifestyleTypes: JSON.stringify(config.lifestyles || this.parseJsonArray(task.lifestyleTypes, ['all'])),
+        taskTags: JSON.stringify(config.tags),
+      };
+    });
+  }
+
+  private async backfillTaskPersonalization() {
+    for (const [title, config] of Object.entries(TASK_PERSONALIZATION)) {
+      await this.taskModel.updateOne(
+        { title: { $regex: this.escapeRegex(title.split('—')[0].trim()), $options: 'i' } },
+        {
+          $set: {
+            taskTags: JSON.stringify(config.tags),
+            ...(config.lifestyles ? { lifestyleTypes: JSON.stringify(config.lifestyles) } : {}),
+          },
+        },
+      );
+    }
+  }
+
+  private async getPersonalizedTaskPool(userId: string) {
+    const tasks = await this.taskModel.find({ isActive: true });
+    const response = await this.onboardingModel.findOne({ userId });
+    if (!response) return tasks.slice(0, 7);
+
+    const answers = this.safeParseObject(response.answers);
+    const profile = this.buildTaskProfile(answers, response.lifestyleType);
+    const completed = await this.submissionModel.find({ userId, status: SubmissionStatus.APPROVED });
+    const completedByCategory = new Map<string, number>();
+    for (const sub of completed) {
+      const task = tasks.find(t => t._id.toString() === sub.taskId.toString());
+      if (task) completedByCategory.set(task.category, (completedByCategory.get(task.category) || 0) + 1);
+    }
+
+    const matched = tasks.filter(task => {
+      const lifestyles = this.parseJsonArray(task.lifestyleTypes, ['all']);
+      const tags = this.parseJsonArray(task.taskTags, ['all']);
+      const difficulty = this.getTaskPersonalization(task.title)?.difficulty || 1;
+      const unlockedLevel = Math.min(3, 1 + Math.floor((completedByCategory.get(task.category) || 0) / 2));
+      const lifestyleMatch = lifestyles.includes('all') || lifestyles.includes(profile.lifestyleType);
+      const tagMatch = tags.includes('all') || tags.some(tag => profile.tags.has(tag));
+      return lifestyleMatch && tagMatch && difficulty <= unlockedLevel;
+    });
+
+    const fallback = tasks.filter(t => this.parseJsonArray(t.taskTags, ['all']).includes('all')).concat(matched);
+    return matched.length >= 5 ? matched : this.uniqueTasks(fallback);
+  }
+
+  private buildTaskProfile(answers: Record<string, string>, lifestyleType?: string | null) {
+    const tags = new Set<string>(['all']);
+    const add = (...items: string[]) => items.forEach(item => tags.add(item));
+    const lifestyle = lifestyleType || 'urban_middle';
+
+    if (['urban_affluent', 'urban_middle'].includes(lifestyle)) add('urban');
+    if (lifestyle === 'semi_urban') add('semi_urban');
+    if (lifestyle === 'rural') add('rural', 'garden');
+
+    const household = answers.household || '';
+    if (household.includes('Joint') || household.includes('Nuclear')) add('family_home');
+    if (household.includes('Living alone')) add('apartment');
+    if (household.includes('Hostel')) add('hostel', 'student');
+
+    const transport = answers.transport_primary || '';
+    if (transport.includes('Own car') || transport.includes('Motorcycle') || transport.includes('Rickshaw') || transport.includes('ride-hailing')) add('drives_regularly');
+    if (transport.includes('Own car')) add('car_owner');
+    if (transport.includes('Public bus') || transport.includes('Metro') || transport.includes('BRT')) add('public_transport_user');
+    if (transport.includes('Bicycle') || transport.includes('walking')) add('active_commuter');
+    if (transport.includes('work/study from home')) add('office_worker');
+
+    const distance = answers.transport_distance || '';
+    if (distance.includes('Less than 3')) add('short_commute');
+    if (distance.includes('10') || distance.includes('More than')) add('long_commute');
+
+    const diet = answers.diet_type || '';
+    if (!diet.includes('vegetarian') && !diet.includes('Mostly daal')) add('meat_eater');
+
+    const kitchen = answers.kitchen_habits || '';
+    if (kitchen.includes('Home-cooked') || kitchen.includes('Mix of home cooking')) add('cooks_at_home');
+    if (kitchen.includes('ordering') || kitchen.includes('eat out') || kitchen.includes('dhaba')) add('orders_food');
+
+    const energy = answers.energy_situation || '';
+    if (energy.includes('UPS')) add('has_ups');
+    const cooling = answers.cooling_method || '';
+    if (cooling.includes('AC')) add('uses_ac');
+    if (cooling.includes('cooler')) add('uses_cooler', 'uses_water_cooler');
+
+    const water = answers.water_source || '';
+    if (water.includes('mineral water')) add('buys_bottled_water');
+    if (water.includes('matka')) add('uses_matka');
+
+    const waste = answers.waste_handling || '';
+    if (waste.includes('Kabari')) add('already_recycles');
+    if (waste.includes('occasionally')) add('some_recycling');
+    if (waste.includes('one bin') || waste.includes('Municipal') || waste.includes('burn')) add('no_recycling');
+
+    const shopping = answers.shopping_habits || '';
+    if (shopping.includes('Sabzi mandi') || shopping.includes('bazaar')) add('market_shopper');
+    if (shopping.includes('supermarket') || shopping.includes('online')) add('supermarket_shopper', 'frequent_shopper');
+    if (shopping.includes('Mix of kirana')) add('market_shopper');
+
+    const consumption = answers.consumption_style || '';
+    if (consumption.includes('Mall brands') || consumption.includes('online shopping')) add('mall_shopper', 'frequent_shopper');
+    if (consumption.includes('keep things for years') || consumption.includes('landa')) add('minimal_shopper');
+
+    if (tags.has('garden') || tags.has('family_home')) add('has_plants');
+    return { lifestyleType: lifestyle, tags };
+  }
+
+  private pickDailyTasks(tasks: TaskDocument[], userId: string, dateKey: string) {
+    const grouped = new Map<string, TaskDocument[]>();
+    for (const task of tasks) {
+      grouped.set(task.category, [...(grouped.get(task.category) || []), task]);
+    }
+    const seed = this.hash(`${userId}:${dateKey}`);
+    const selected: TaskDocument[] = [];
+    for (const [, categoryTasks] of grouped) {
+      const sorted = [...categoryTasks].sort((a, b) => this.hash(`${seed}:${a._id}`) - this.hash(`${seed}:${b._id}`));
+      if (sorted[0]) selected.push(sorted[0]);
+    }
+    const remaining = tasks.filter(t => !selected.some(s => s._id.toString() === t._id.toString()))
+      .sort((a, b) => this.hash(`${seed}:r:${a._id}`) - this.hash(`${seed}:r:${b._id}`));
+    return selected.concat(remaining).slice(0, 7);
+  }
+
+  private uniqueTasks(tasks: TaskDocument[]) {
+    const seen = new Set<string>();
+    return tasks.filter(task => {
+      const id = task._id.toString();
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+
+  private parseJsonArray(value: string | null | undefined, fallback: string[] = []) {
+    if (!value) return fallback;
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private safeParseObject(value: string | null | undefined) {
+    if (!value) return {};
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+
+  private hash(value: string) {
+    let h = 0;
+    for (let i = 0; i < value.length; i++) h = Math.imul(31, h) + value.charCodeAt(i) | 0;
+    return Math.abs(h);
+  }
+
+  private getTaskPersonalization(title: string) {
+    const normalizedTitle = this.normalizeTitle(title);
+    return Object.entries(TASK_PERSONALIZATION).find(([key]) => this.normalizeTitle(key) === normalizedTitle)?.[1];
+  }
+
+  private normalizeTitle(title: string) {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  private escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   async getTaskById(id: string) {

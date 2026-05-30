@@ -4,6 +4,7 @@ import { Task, TaskSchema } from './task.schema';
 import { TaskSubmission, TaskSubmissionSchema } from './task-submission.schema';
 import { TaskCommitment, TaskCommitmentSchema } from './task-commitment.schema';
 import { GpsSession, GpsSessionSchema } from './gps-session.schema';
+import { OnboardingResponse, OnboardingResponseSchema } from '../onboarding/onboarding-response.schema';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { GeminiVerifyService } from './gemini-verify.service';
@@ -19,6 +20,7 @@ import { StreaksModule } from '../streaks/streaks.module';
       { name: TaskSubmission.name, schema: TaskSubmissionSchema },
       { name: TaskCommitment.name, schema: TaskCommitmentSchema },
       { name: GpsSession.name, schema: GpsSessionSchema },
+      { name: OnboardingResponse.name, schema: OnboardingResponseSchema },
     ]),
     forwardRef(() => PointsModule),
     StreaksModule,

@@ -59,6 +59,9 @@ export class Task {
   lifestyleTypes: string;
 
   @Prop({ default: null })
+  taskTags: string;
+
+  @Prop({ default: null })
   geminiPromptHint: string;
 }
 
