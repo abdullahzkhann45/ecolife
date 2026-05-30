@@ -143,16 +143,17 @@ async function main() {
   const testEmails = profiles.map((_, i) => `testuser${i + 1}@ecolife.dev`);
   const existingUsers = await UserModel.find({ email: { $in: testEmails } });
   const existingIds = existingUsers.map(u => u._id);
+  const existingUserKeys = existingIds.concat(existingIds.map(id => id.toString()));
   await Promise.all([
     UserModel.deleteMany({ _id: { $in: existingIds } }),
-    OnboardingModel.deleteMany({ userId: { $in: existingIds } }),
-    SubmissionModel.deleteMany({ userId: { $in: existingIds } }),
-    CommitmentModel.deleteMany({ userId: { $in: existingIds } }),
-    StreakModel.deleteMany({ userId: { $in: existingIds } }),
-    LedgerModel.deleteMany({ userId: { $in: existingIds } }),
-    FriendshipModel.deleteMany({ $or: [{ requesterId: { $in: existingIds } }, { addresseeId: { $in: existingIds } }] }),
-    InventoryModel.deleteMany({ userId: { $in: existingIds } }),
-    SnapshotModel.deleteMany({ userId: { $in: existingIds } }),
+    OnboardingModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    SubmissionModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    CommitmentModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    StreakModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    LedgerModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    FriendshipModel.deleteMany({ $or: [{ requesterId: { $in: existingUserKeys } }, { addresseeId: { $in: existingUserKeys } }] }),
+    InventoryModel.deleteMany({ userId: { $in: existingUserKeys } }),
+    SnapshotModel.deleteMany({ userId: { $in: existingUserKeys } }),
   ]);
 
   if (await TaskModel.countDocuments() === 0) await TaskModel.insertMany(personalizeSeedTasks());
@@ -189,8 +190,10 @@ async function main() {
     });
     createdUsers.push(user);
 
+    const userId = user._id.toString();
+
     await OnboardingModel.create({
-      userId: user._id,
+      userId,
       answers: JSON.stringify(p.answers),
       baselineScore,
       lifestyleType,
@@ -223,7 +226,7 @@ async function main() {
         water += task.waterSavedLiters || 0;
         waste += task.wasteDivertedGrams || 0;
         const submission = await SubmissionModel.create({
-          userId: user._id,
+          userId,
           taskId: task._id,
           status: SubmissionStatus.APPROVED,
           pointsAwarded: points,
@@ -234,7 +237,7 @@ async function main() {
           updatedAt: date,
         });
         await LedgerModel.create({
-          userId: user._id,
+          userId,
           eventType: LedgerEventType.TASK_COMPLETION,
           amount: points,
           taskSubmissionId: submission._id,
@@ -249,7 +252,7 @@ async function main() {
       longestStreak = Math.max(longestStreak, currentStreak);
       const ecoScore = Math.min(1000, Math.round(baselineScore * 0.3 + Math.min(500, runningPoints / 4) + currentStreak * 6));
       await SnapshotModel.create({
-        userId: user._id,
+        userId,
         date: dateString,
         ecoScore,
         tasksCompleted: completedCount,
@@ -267,7 +270,7 @@ async function main() {
     }
 
     await StreakModel.create({
-      userId: user._id,
+      userId,
       currentStreak: p.streak,
       longestStreak: Math.max(p.streak, longestStreak),
       lastCompletedDate: p.streak > 0 ? dateKey(new Date()) : dateKey(daysAgo(2)),
@@ -278,7 +281,7 @@ async function main() {
     const commitments = profileTasks.slice(0, 6);
     for (const task of commitments) {
       await CommitmentModel.create({
-        userId: user._id,
+        userId,
         taskId: task._id,
         isActive: true,
         committedAt: daysAgo(13),
@@ -287,8 +290,8 @@ async function main() {
 
     if (i === 0 || i === 3 || i === 7) {
       const item = shopItems[i % shopItems.length];
-      await InventoryModel.create({ userId: user._id, shopItemId: item._id, isEquipped: true, purchasedAt: daysAgo(3) });
-      await LedgerModel.create({ userId: user._id, eventType: LedgerEventType.PURCHASE, amount: -item.price, shopItemId: item._id, description: `Purchased ${item.name}`, createdAt: daysAgo(3), updatedAt: daysAgo(3) });
+      await InventoryModel.create({ userId, shopItemId: item._id, isEquipped: true, purchasedAt: daysAgo(3) });
+      await LedgerModel.create({ userId, eventType: LedgerEventType.PURCHASE, amount: -item.price, shopItemId: item._id, description: `Purchased ${item.name}`, createdAt: daysAgo(3), updatedAt: daysAgo(3) });
     }
   }
 
