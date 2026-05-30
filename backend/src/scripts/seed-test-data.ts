@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { User, UserSchema } from '../users/user.schema';
 import { Task, TaskSchema } from '../tasks/task.schema';
 import { TaskSubmission, TaskSubmissionSchema, SubmissionStatus } from '../tasks/task-submission.schema';
+import { TaskCommitment, TaskCommitmentSchema } from '../tasks/task-commitment.schema';
 import { Streak, StreakSchema } from '../streaks/streak.schema';
 import { PointsLedger, PointsLedgerSchema, LedgerEventType } from '../points/points-ledger.schema';
 import { Friendship, FriendshipSchema, FriendshipStatus } from '../friends/friendship.schema';
@@ -53,6 +54,59 @@ function personalizeSeedTasks() {
   });
 }
 
+function parseTags(task: any) {
+  try {
+    return JSON.parse(task.taskTags || '["all"]');
+  } catch {
+    return ['all'];
+  }
+}
+
+function buildProfileTags(profile: any, lifestyleType: string) {
+  const tags = new Set<string>(['all']);
+  const add = (...items: string[]) => items.forEach(item => tags.add(item));
+  if (['urban_affluent', 'urban_middle'].includes(lifestyleType)) add('urban');
+  if (lifestyleType === 'semi_urban') add('semi_urban');
+  if (lifestyleType === 'rural') add('rural', 'garden');
+
+  const a = profile.answers;
+  if (a.household?.includes('Joint') || a.household?.includes('Nuclear')) add('family_home', 'has_plants');
+  if (a.household?.includes('Hostel')) add('hostel', 'student');
+  if (a.household?.includes('Living alone')) add('apartment');
+  if (a.transport_primary?.includes('Own car') || a.transport_primary?.includes('Motorcycle') || a.transport_primary?.includes('Rickshaw')) add('drives_regularly');
+  if (a.transport_primary?.includes('Own car')) add('car_owner');
+  if (a.transport_distance?.includes('Less than 3')) add('short_commute');
+  if (a.transport_distance?.includes('10') || a.transport_distance?.includes('More than')) add('long_commute');
+  if (!a.diet_type?.includes('vegetarian') && !a.diet_type?.includes('Mostly daal')) add('meat_eater');
+  if (a.kitchen_habits?.includes('Home-cooked') || a.kitchen_habits?.includes('Mix of home cooking')) add('cooks_at_home');
+  if (a.kitchen_habits?.includes('ordering') || a.kitchen_habits?.includes('eat out') || a.kitchen_habits?.includes('dhaba')) add('orders_food');
+  if (a.energy_situation?.includes('UPS')) add('has_ups');
+  if (a.cooling_method?.includes('AC')) add('uses_ac');
+  if (a.cooling_method?.includes('cooler')) add('uses_cooler', 'uses_water_cooler');
+  if (a.water_source?.includes('mineral water')) add('buys_bottled_water');
+  if (a.waste_handling?.includes('Kabari')) add('already_recycles');
+  if (a.waste_handling?.includes('occasionally')) add('some_recycling');
+  if (a.waste_handling?.includes('one bin') || a.waste_handling?.includes('Municipal') || a.waste_handling?.includes('burn')) add('no_recycling');
+  if (a.shopping_habits?.includes('Sabzi mandi') || a.shopping_habits?.includes('bazaar') || a.shopping_habits?.includes('kirana')) add('market_shopper');
+  if (a.shopping_habits?.includes('supermarket') || a.shopping_habits?.includes('online')) add('supermarket_shopper', 'frequent_shopper');
+  if (a.consumption_style?.includes('Mall brands') || a.consumption_style?.includes('online shopping')) add('mall_shopper', 'frequent_shopper');
+  if (a.consumption_style?.includes('keep things for years') || a.consumption_style?.includes('landa')) add('minimal_shopper');
+  return tags;
+}
+
+function taskPoolFor(profile: any, lifestyleType: string, tasks: any[]) {
+  const tags = buildProfileTags(profile, lifestyleType);
+  const matched = tasks.filter(task => {
+    const taskTags = parseTags(task);
+    let lifestyles = ['all'];
+    try { lifestyles = JSON.parse(task.lifestyleTypes || '["all"]'); } catch {}
+    const lifestyleMatch = lifestyles.includes('all') || lifestyles.includes(lifestyleType);
+    const tagMatch = taskTags.includes('all') || taskTags.some((tag: string) => tags.has(tag));
+    return lifestyleMatch && tagMatch;
+  });
+  return matched.length >= 7 ? matched : matched.concat(tasks.filter(t => parseTags(t).includes('all')));
+}
+
 const profiles = [
   { username: 'lahore-architect', profession: 'Architect', completion: 0.75, streak: 14, answers: answers({ area_type: 0, household: 1, transport_primary: 0, transport_distance: 2, diet_type: 1, kitchen_habits: 1, energy_situation: 2, cooling_method: 0, water_source: 0, waste_handling: 2, shopping_habits: 2, consumption_style: 2 }) },
   { username: 'lahore-teacher', profession: 'Teacher', completion: 0.62, streak: 8, answers: answers({ area_type: 0, household: 0, transport_primary: 4, transport_distance: 1, diet_type: 2, kitchen_habits: 0, energy_situation: 0, cooling_method: 1, water_source: 0, waste_handling: 1, shopping_habits: 1, consumption_style: 1 }) },
@@ -77,6 +131,7 @@ async function main() {
   const UserModel = mongoose.model(User.name, UserSchema) as any;
   const TaskModel = mongoose.model(Task.name, TaskSchema) as any;
   const SubmissionModel = mongoose.model(TaskSubmission.name, TaskSubmissionSchema) as any;
+  const CommitmentModel = mongoose.model(TaskCommitment.name, TaskCommitmentSchema) as any;
   const StreakModel = mongoose.model(Streak.name, StreakSchema) as any;
   const LedgerModel = mongoose.model(PointsLedger.name, PointsLedgerSchema) as any;
   const FriendshipModel = mongoose.model(Friendship.name, FriendshipSchema) as any;
@@ -92,6 +147,7 @@ async function main() {
     UserModel.deleteMany({ _id: { $in: existingIds } }),
     OnboardingModel.deleteMany({ userId: { $in: existingIds } }),
     SubmissionModel.deleteMany({ userId: { $in: existingIds } }),
+    CommitmentModel.deleteMany({ userId: { $in: existingIds } }),
     StreakModel.deleteMany({ userId: { $in: existingIds } }),
     LedgerModel.deleteMany({ userId: { $in: existingIds } }),
     FriendshipModel.deleteMany({ $or: [{ requesterId: { $in: existingIds } }, { addresseeId: { $in: existingIds } }] }),
@@ -119,6 +175,7 @@ async function main() {
     const email = `testuser${i + 1}@ecolife.dev`;
     const { baselineScore, categoryScores } = calculatePakistanBaseline(p.answers);
     const lifestyleType = classifyLifestyle(p.answers);
+    const profileTasks = taskPoolFor(p, lifestyleType, tasks);
     const user = await UserModel.create({
       email,
       username: p.username,
@@ -152,7 +209,7 @@ async function main() {
       const dateString = dateKey(date);
       const activeDay = Math.random() < p.completion || day < p.streak;
       const completedCount = activeDay ? Math.max(1, Math.round(1 + Math.random() * 3)) : 0;
-      const dayTasks = [...tasks].sort(() => Math.random() - 0.5).slice(0, completedCount);
+      const dayTasks = [...profileTasks].sort(() => Math.random() - 0.5).slice(0, completedCount);
       let dayPoints = 0;
       let co2 = 0;
       let water = 0;
@@ -217,6 +274,16 @@ async function main() {
       freezeUsedThisPeriod: i % 4 === 0,
       freezePeriodStart: dateKey(daysAgo(7)),
     });
+
+    const commitments = profileTasks.slice(0, 6);
+    for (const task of commitments) {
+      await CommitmentModel.create({
+        userId: user._id,
+        taskId: task._id,
+        isActive: true,
+        committedAt: daysAgo(13),
+      });
+    }
 
     if (i === 0 || i === 3 || i === 7) {
       const item = shopItems[i % shopItems.length];
