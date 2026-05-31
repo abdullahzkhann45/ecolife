@@ -11,6 +11,9 @@ const ALL_CATEGORIES = [
   TaskCategory.WATER, TaskCategory.WASTE, TaskCategory.CONSUMPTION,
 ];
 
+const ACTIVITY_SHARE_OF_GROWTH = 0.7;
+const COMMITMENT_SHARE_OF_GROWTH = 0.3;
+
 @Injectable()
 export class EcoScoreService {
   constructor(
@@ -24,8 +27,6 @@ export class EcoScoreService {
     const onboarding = await this.onboardingModel.findOne({ userId });
     const baseline = onboarding?.baselineScore ?? 400;
     const categoryScoresRaw = onboarding?.categoryScores ? JSON.parse(onboarding.categoryScores) : {};
-
-    const baselineComponent = Math.round((baseline / 1000) * 300);
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
     const submissions = await this.submissionModel.find({ userId, status: SubmissionStatus.APPROVED });
@@ -44,12 +45,14 @@ export class EcoScoreService {
     for (const cat of ALL_CATEGORIES) {
       activitySum += Math.min(100, (categoryPoints[cat] / expectedMax) * 100);
     }
-    const activityComponent = Math.round((activitySum / ALL_CATEGORIES.length) * 5);
-    const activityCapped = Math.min(500, activityComponent);
+    const activityPct = activitySum / ALL_CATEGORIES.length / 100;
+    const remainingGrowth = Math.max(0, 1000 - baseline);
+    const activityCap = Math.round(remainingGrowth * ACTIVITY_SHARE_OF_GROWTH);
+    const commitmentCap = remainingGrowth - activityCap;
+    const activityComponent = Math.min(activityCap, Math.round(activityPct * activityCap));
 
     const commitments = await this.commitmentModel.find({ userId, isActive: true });
     let commitmentComponent = 0;
-    let activityWeight = 500;
 
     if (commitments.length > 0) {
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
@@ -69,21 +72,18 @@ export class EcoScoreService {
       }
       const rates = Object.values(dayCompletions).map(d => d.total > 0 ? d.done / d.total : 0);
       const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
-      commitmentComponent = Math.round(avgRate * 200);
-      activityWeight = 500;
-    } else {
-      activityWeight = 700;
-      commitmentComponent = 0;
+      commitmentComponent = Math.min(commitmentCap, Math.round(avgRate * commitmentCap));
     }
 
-    const finalActivity = Math.min(activityWeight, Math.round(activityCapped * (activityWeight / 500)));
-    const currentScore = Math.min(1000, baselineComponent + finalActivity + commitmentComponent);
+    const currentScore = Math.min(1000, baseline + activityComponent + commitmentComponent);
 
     const categoryBreakdown: Record<string, number> = {};
     for (const cat of ALL_CATEGORIES) {
-      const baselinePart = (categoryScoresRaw[cat] ?? 50) * 5;
-      const activityPart = Math.min(500, Math.round((categoryPoints[cat] / expectedMax) * 500));
-      categoryBreakdown[cat] = Math.min(1000, baselinePart + activityPart);
+      const categoryBaseline = (categoryScoresRaw[cat] ?? 50) * 10;
+      const categoryGrowthRoom = Math.max(0, 1000 - categoryBaseline);
+      const categoryActivityPct = Math.min(1, categoryPoints[cat] / expectedMax);
+      const activityPart = Math.round(categoryActivityPct * categoryGrowthRoom);
+      categoryBreakdown[cat] = Math.min(1000, categoryBaseline + activityPart);
     }
 
     return {
@@ -92,8 +92,15 @@ export class EcoScoreService {
       improvement: currentScore - baseline,
       categoryBreakdown,
       tasksCompletedLast30Days: recent.length,
-      components: { baseline: baselineComponent, activity: finalActivity, commitment: commitmentComponent },
-      methodology: 'Score = Baseline (30%) + Activity (50%) + Commitment (20%). Rolling 30-day window. Pakistan-weighted categories. Scale: 0-1000.',
+      components: {
+        baseline,
+        activity: activityComponent,
+        activityCap,
+        commitment: commitmentComponent,
+        commitmentCap,
+        remainingPotential: Math.max(0, 1000 - currentScore),
+      },
+      methodology: 'Score = questionnaire baseline + verified improvement. Baseline is the starting 0-1000 score from Pakistan-weighted questionnaire answers. Activity can add 70% of the remaining growth potential from rolling 30-day verified task completions. Commitment can add 30% from 7-day committed-task consistency. The score never starts below baseline and is capped at 1000.',
     };
   }
 }

@@ -282,7 +282,10 @@ async function main() {
         runningPoints += bonus;
       }
 
-      const ecoScore = Math.min(1000, Math.round(baselineScore * 0.3 + Math.min(500, runningPoints / 4) + currentStreak * 6));
+      const remainingGrowth = Math.max(0, 1000 - baselineScore);
+      const activityGain = Math.min(Math.round(remainingGrowth * 0.7), Math.round((runningPoints / 2500) * remainingGrowth * 0.7));
+      const commitmentGain = Math.min(Math.round(remainingGrowth * 0.3), Math.round((Math.min(currentStreak, 14) / 14) * remainingGrowth * 0.3));
+      const ecoScore = Math.min(1000, baselineScore + activityGain + commitmentGain);
       await SnapshotModel.create({
         userId: user._id.toString(), date: ds, ecoScore, tasksCompleted: completedCount,
         tasksCommitted: 4, completionRate: completedCount / 4, pointsEarned: dayPoints,

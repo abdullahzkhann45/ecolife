@@ -36,7 +36,7 @@ export default function EcoScorePage() {
           <div className="eyebrow" style={{ marginBottom: 14 }}>§ 03 — Eco score</div>
           <h1>One number,<br /><em>all of it</em>.</h1>
         </div>
-        <p className="page-sub">Baseline (30%) + Activity (50%) + Commitment (20%). Pakistan-weighted. Rolling 30-day window.</p>
+        <p className="page-sub">Your questionnaire baseline is the starting score. Verified activity and commitments add improvement on top, capped at 1000.</p>
       </div>
 
       {/* Score + categories grid */}
@@ -77,9 +77,9 @@ export default function EcoScorePage() {
       {/* Score components */}
       {score.components && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 48 }} className="stagger">
-          <div className="stat-tile"><div className="label">Baseline</div><div className="value" style={{ fontSize: 48 }}>{score.components.baseline}<span className="unit">/ 300</span></div><div className="sub">From questionnaire</div></div>
-          <div className="stat-tile leaf"><div className="label">Activity</div><div className="value" style={{ fontSize: 48 }}>{score.components.activity}<span className="unit">/ 500</span></div><div className="sub">30-day task completions</div></div>
-          <div className="stat-tile accent"><div className="label">Commitment</div><div className="value" style={{ fontSize: 48 }}>{score.components.commitment}<span className="unit">/ 200</span></div><div className="sub">7-day completion rate</div></div>
+          <div className="stat-tile"><div className="label">Baseline</div><div className="value" style={{ fontSize: 48 }}>{score.components.baseline}<span className="unit">/ 1000</span></div><div className="sub">Starting score from questionnaire</div></div>
+          <div className="stat-tile leaf"><div className="label">Activity gain</div><div className="value" style={{ fontSize: 48 }}>{score.components.activity}<span className="unit">/ {score.components.activityCap}</span></div><div className="sub">30-day verified completions</div></div>
+          <div className="stat-tile accent"><div className="label">Commitment gain</div><div className="value" style={{ fontSize: 48 }}>{score.components.commitment}<span className="unit">/ {score.components.commitmentCap}</span></div><div className="sub">7-day committed-task consistency</div></div>
         </div>
       )}
 
@@ -115,7 +115,7 @@ export default function EcoScorePage() {
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{score.methodology}</p>
           ) : (
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--mute)' }}>
-              Six category sub-scores. Pakistan-weighted baseline. Three components: Baseline (30%), Activity (50%), Commitment (20%).
+              Your questionnaire sets the baseline. Verified tasks and commitment consistency add improvement above it.
             </p>
           )}
         </div>
