@@ -399,7 +399,7 @@ export class TasksService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════
 
   static readonly DAYS_PER_CHAPTER = 5;
-  static readonly TASKS_PER_DAY = 5;
+  static readonly TASKS_PER_DAY = 7;
 
   async getTodaysTasks(userId: string) {
     const progress = await this.getOrCreateProgress(userId);
