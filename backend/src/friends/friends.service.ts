@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Friendship, FriendshipDocument, FriendshipStatus } from './friendship.schema';
 import { User, UserDocument } from '../users/user.schema';
 import { PointsLedger, PointsLedgerDocument } from '../points/points-ledger.schema';
@@ -14,7 +14,8 @@ export class FriendsService {
   ) {}
 
   async sendRequest(requesterId: string, username: string) {
-    const addressee = await this.userModel.findOne({ username });
+    const normalizedUsername = username.trim().toLowerCase();
+    const addressee = await this.userModel.findOne({ username: normalizedUsername });
     if (!addressee) throw new NotFoundException('User not found');
     const addresseeId = addressee._id.toString();
     if (addresseeId === requesterId) throw new BadRequestException('Cannot friend yourself');
@@ -27,10 +28,12 @@ export class FriendsService {
     });
     if (existing) throw new BadRequestException('Friendship already exists');
 
-    return this.friendshipModel.create({ requesterId, addresseeId });
+    const friendship = await this.friendshipModel.create({ requesterId, addresseeId });
+    return { id: friendship._id.toString(), status: friendship.status, addressee: { id: addresseeId, username: addressee.username } };
   }
 
   async acceptRequest(userId: string, friendshipId: string) {
+    if (!Types.ObjectId.isValid(friendshipId)) throw new NotFoundException('Friend request not found');
     const friendship = await this.friendshipModel.findOne({
       _id: friendshipId, addresseeId: userId, status: FriendshipStatus.PENDING,
     });
@@ -40,6 +43,7 @@ export class FriendsService {
   }
 
   async removeFriend(userId: string, friendshipId: string) {
+    if (!Types.ObjectId.isValid(friendshipId)) throw new NotFoundException('Friendship not found');
     const friendship = await this.friendshipModel.findOne({
       _id: friendshipId,
       $or: [{ requesterId: userId }, { addresseeId: userId }],
@@ -49,7 +53,7 @@ export class FriendsService {
   }
 
   async blockUser(userId: string, targetUsername: string) {
-    const target = await this.userModel.findOne({ username: targetUsername });
+    const target = await this.userModel.findOne({ username: targetUsername.trim().toLowerCase() });
     if (!target) throw new NotFoundException('User not found');
     const targetId = target._id.toString();
     let friendship = await this.friendshipModel.findOne({
@@ -75,14 +79,18 @@ export class FriendsService {
     });
 
     // Collect all friend user IDs
-    const friendUserIds = friendships.map(f =>
-      f.requesterId === userId ? f.addresseeId : f.requesterId,
-    );
-    const users = await this.userModel.find({ _id: { $in: friendUserIds } });
+    const friendUserIds = friendships.map(f => {
+      const requesterId = f.requesterId.toString();
+      const addresseeId = f.addresseeId.toString();
+      return requesterId === userId ? addresseeId : requesterId;
+    });
+    const users = await this.userModel.find({ _id: { $in: this.toObjectIds(friendUserIds) } });
     const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
     return friendships.map(f => {
-      const friendId = f.requesterId === userId ? f.addresseeId : f.requesterId;
+      const requesterId = f.requesterId.toString();
+      const addresseeId = f.addresseeId.toString();
+      const friendId = requesterId === userId ? addresseeId : requesterId;
       const friend = userMap.get(friendId);
       return {
         friendshipId: f._id.toString(),
@@ -98,14 +106,15 @@ export class FriendsService {
     const pending = await this.friendshipModel.find({
       addresseeId: userId, status: FriendshipStatus.PENDING,
     });
-    const requesterIds = pending.map(p => p.requesterId);
-    const users = await this.userModel.find({ _id: { $in: requesterIds } });
+    const requesterIds = pending.map(p => p.requesterId.toString());
+    const users = await this.userModel.find({ _id: { $in: this.toObjectIds(requesterIds) } });
     const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
     return pending.map(p => ({
+      id: p._id.toString(),
       _id: p._id.toString(),
-      requesterId: p.requesterId,
-      requester: userMap.get(p.requesterId),
+      requesterId: p.requesterId.toString(),
+      requester: userMap.get(p.requesterId.toString()),
       status: p.status,
     }));
   }
@@ -129,7 +138,7 @@ export class FriendsService {
       weeklyPoints[uid] = (weeklyPoints[uid] || 0) + e.amount;
     }
 
-    const users = await this.userModel.find({ _id: { $in: friendIds } });
+    const users = await this.userModel.find({ _id: { $in: this.toObjectIds(friendIds) } });
     const leaderboard = users.map(u => ({
       id: u._id.toString(),
       username: u.username,
@@ -138,5 +147,9 @@ export class FriendsService {
     })).sort((a, b) => b.weeklyPoints - a.weeklyPoints);
 
     return leaderboard.map((u, i) => ({ ...u, rank: i + 1 }));
+  }
+
+  private toObjectIds(ids: string[]) {
+    return ids.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
   }
 }

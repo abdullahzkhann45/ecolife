@@ -14,27 +14,34 @@ export default function FriendsPage() {
   const [addError, setAddError] = useState('');
   const [addSuccess, setAddSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const load = async () => {
-    const [lb, fr, pr] = await Promise.all([
-      api.get('/friends/leaderboard'),
-      api.get('/friends'),
-      api.get('/friends/pending'),
-    ]);
-    setLeaderboard(lb.data);
-    setFriends(fr.data);
-    setPending(pr.data);
+    try {
+      const [lb, fr, pr] = await Promise.all([
+        api.get('/friends/leaderboard'),
+        api.get('/friends'),
+        api.get('/friends/pending'),
+      ]);
+      setLeaderboard(lb.data);
+      setFriends(fr.data);
+      setPending(pr.data);
+    } catch (err: any) {
+      setAddError(err.response?.data?.message || 'Failed to load friends');
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const handleAddFriend = async () => {
-    if (!addUsername.trim()) return;
+    const username = addUsername.trim().toLowerCase();
+    if (!username) return;
     setAddError(''); setAddSuccess(''); setLoading(true);
     try {
-      await api.post('/friends/request', { username: addUsername });
-      setAddSuccess(`Friend request sent to @${addUsername}`);
+      await api.post('/friends/request', { username });
+      setAddSuccess(`Friend request sent to @${username}`);
       setAddUsername('');
+      await load();
     } catch (err: any) {
       setAddError(err.response?.data?.message || 'Failed to send request');
     } finally {
@@ -42,8 +49,32 @@ export default function FriendsPage() {
     }
   };
 
-  const handleAccept = async (id: string) => { await api.post(`/friends/${id}/accept`); load(); };
-  const handleRemove = async (id: string) => { await api.delete(`/friends/${id}`); load(); };
+  const handleAccept = async (id: string) => {
+    if (!id) return;
+    setAddError(''); setActionId(id);
+    try {
+      await api.post(`/friends/${id}/accept`);
+      await load();
+      setTab('friends');
+    } catch (err: any) {
+      setAddError(err.response?.data?.message || 'Failed to accept request');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    if (!id) return;
+    setAddError(''); setActionId(id);
+    try {
+      await api.delete(`/friends/${id}`);
+      await load();
+    } catch (err: any) {
+      setAddError(err.response?.data?.message || 'Failed to update friendship');
+    } finally {
+      setActionId(null);
+    }
+  };
 
   const avatarColors = ['var(--accent)', 'var(--leaf)', 'var(--ink)'];
   const initials = (s: string) => s.slice(0, 2).toUpperCase();
@@ -72,7 +103,7 @@ export default function FriendsPage() {
             placeholder="Add a friend by username…"
             className="eco-input"
             style={{ padding: '6px 10px', flex: 1, fontSize: 15, borderBottom: 0 }}
-            onKeyDown={e => e.key === 'Enter' && handleAddFriend()}
+            onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
           />
           <button
             onClick={handleAddFriend}
@@ -80,7 +111,7 @@ export default function FriendsPage() {
             className="btn btn-accent"
             style={{ height: 40, padding: '0 18px', fontSize: 13 }}
           >
-            {loading ? <div className="spinner spinner-paper" /> : 'Send'}
+            {loading ? <div className="spinner spinner-paper" /> : 'Send request'}
           </button>
         </div>
 
@@ -180,21 +211,23 @@ export default function FriendsPage() {
               <div className="eyebrow" style={{ marginBottom: 10 }}>§ Empty</div>
               <p style={{ color: 'var(--mute)', fontSize: 15 }}>No pending friend requests.</p>
             </div>
-          ) : pending.map((req, i) => (
-            <div key={req.id} className="eco-card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          ) : pending.map((req, i) => {
+            const requestId = req.id || req._id;
+            return (
+            <div key={requestId} className="eco-card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div className="avatar" style={{ background: avatarColors[i % 3] }}>{initials(req.requester?.username ?? '?')}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'var(--display)', fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em' }}>@{req.requester?.username}</div>
                 <div className="eyebrow" style={{ marginTop: 4 }}>wants to be friends</div>
               </div>
-              <button onClick={() => handleAccept(req.id)} className="btn btn-accent" style={{ height: 36, fontSize: 12 }}>
-                Accept
+              <button onClick={() => handleAccept(requestId)} disabled={actionId === requestId} className="btn btn-accent" style={{ height: 36, fontSize: 12 }}>
+                {actionId === requestId ? 'Working...' : 'Accept'}
               </button>
-              <button onClick={() => handleRemove(req.id)} className="btn btn-danger" style={{ height: 36, fontSize: 12 }}>
+              <button onClick={() => handleRemove(requestId)} disabled={actionId === requestId} className="btn btn-danger" style={{ height: 36, fontSize: 12 }}>
                 Decline
               </button>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
