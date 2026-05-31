@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { OnboardingResponse, OnboardingResponseDocument } from './onboarding-response.schema';
 import { User, UserDocument } from '../users/user.schema';
 import { Task, TaskDocument } from '../tasks/task.schema';
+import { TasksService } from '../tasks/tasks.service';
 import {
   PAKISTAN_QUESTIONS,
   calculatePakistanBaseline,
@@ -17,6 +18,7 @@ export class OnboardingService {
     @InjectModel(OnboardingResponse.name) private responseModel: Model<OnboardingResponseDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Task.name) private taskModel: Model<TaskDocument>,
+    private tasksService: TasksService,
   ) {}
 
   getQuestions() {
@@ -49,7 +51,8 @@ export class OnboardingService {
       lifestyleType,
     });
 
-    const starterTasks = await this.getStarterTasks(lifestyleType);
+    // Use the full personalization engine to pick starter tasks
+    const starterTasks = await this.getStarterTasks(userId, answers, lifestyleType);
 
     return {
       baselineScore,
@@ -71,28 +74,70 @@ export class OnboardingService {
     return breakdown;
   }
 
-  private async getStarterTasks(lifestyleType: string) {
-    const tasks = await this.taskModel.find({ isActive: true });
+  private async getStarterTasks(userId: string, answers: Record<string, string>, lifestyleType: string) {
+    const allTasks = await this.taskModel.find({ isActive: true });
+    const profile = this.tasksService.buildTaskProfile(answers, lifestyleType);
 
-    const matched = tasks.filter(t => {
-      if (!t.lifestyleTypes) return true;
-      try {
-        const types: string[] = JSON.parse(t.lifestyleTypes);
-        return types.includes(lifestyleType) || types.includes('all');
-      } catch {
-        return true;
+    // Filter tasks that match user's profile (same logic as getPersonalizedTaskPool but without DB lookups for submissions)
+    const matched: any[] = [];
+    const universal: any[] = [];
+
+    for (const task of allTasks) {
+      const taskTags = this.parseJsonArray(task.taskTags);
+      const taskLifestyles = this.parseJsonArray(task.lifestyleTypes);
+
+      // Only show difficulty 1 tasks for new users
+      const seed = (this.tasksService as any).constructor?.SEED_TASKS?.find?.((s: any) => s.title === task.title);
+      // Use inline check: find in the exported SEED_TASKS
+      const difficulty = this.getDifficulty(task.title);
+      if (difficulty > 1) continue;
+
+      // Check lifestyle match
+      const lifestyleOk = taskLifestyles.includes('all') || taskLifestyles.includes(profile.lifestyleType);
+      if (!lifestyleOk) continue;
+
+      if (taskTags.includes('_universal')) {
+        universal.push(task);
+        continue;
       }
-    });
 
+      const hasTagMatch = taskTags.some(tag => profile.tags.has(tag));
+      if (hasTagMatch) matched.push(task);
+    }
+
+    // Pick 1 per category from matched, then fill with universal
     const categories = Object.keys(CATEGORY_WEIGHTS);
     const selected: any[] = [];
     for (const cat of categories) {
-      const catTasks = matched.filter(t => t.category === cat);
-      if (catTasks.length > 0) {
-        selected.push(catTasks[0]);
-        if (catTasks.length > 1) selected.push(catTasks[1]);
+      const catTask = matched.find(t => t.category === cat);
+      if (catTask) selected.push(catTask);
+    }
+    // Fill remaining with universal tasks not already selected
+    const selectedIds = new Set(selected.map(t => t._id.toString()));
+    for (const task of universal) {
+      if (!selectedIds.has(task._id.toString())) {
+        selected.push(task);
+        selectedIds.add(task._id.toString());
       }
     }
+
     return selected.slice(0, 8);
+  }
+
+  private getDifficulty(title: string): number {
+    // Import SEED_TASKS to get difficulty
+    const { SEED_TASKS } = require('../tasks/tasks.service');
+    const seed = SEED_TASKS.find((s: any) => s.title === title);
+    return seed?.difficulty || 1;
+  }
+
+  private parseJsonArray(value: string | null | undefined): string[] {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 }

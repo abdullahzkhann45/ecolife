@@ -5,8 +5,8 @@ export type StreakDocument = Streak & Document;
 
 @Schema({ timestamps: true })
 export class Streak {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true, unique: true })
+  userId: string;
 
   @Prop({ default: 0 })
   currentStreak: number;

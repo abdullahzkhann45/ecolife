@@ -5,8 +5,8 @@ export type InventoryDocument = Inventory & Document;
 
 @Schema({ timestamps: true })
 export class Inventory {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true })
+  userId: string;
 
   @Prop({ type: Types.ObjectId, ref: 'ShopItem', required: true })
   shopItemId: Types.ObjectId;

@@ -11,11 +11,11 @@ export enum FriendshipStatus {
 
 @Schema({ timestamps: true })
 export class Friendship {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  requesterId: Types.ObjectId;
+  @Prop({ required: true })
+  requesterId: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  addresseeId: Types.ObjectId;
+  @Prop({ required: true })
+  addresseeId: string;
 
   @Prop({ default: FriendshipStatus.PENDING, enum: FriendshipStatus })
   status: FriendshipStatus;

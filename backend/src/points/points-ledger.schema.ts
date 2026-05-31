@@ -13,8 +13,8 @@ export enum LedgerEventType {
 
 @Schema({ timestamps: true })
 export class PointsLedger {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true })
+  userId: string;
 
   @Prop({ required: true, enum: LedgerEventType })
   eventType: LedgerEventType;

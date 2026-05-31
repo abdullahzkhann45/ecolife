@@ -5,8 +5,8 @@ export type GpsSessionDocument = GpsSession & Document;
 
 @Schema({ timestamps: true })
 export class GpsSession {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true })
+  userId: string;
 
   @Prop({ type: Types.ObjectId, ref: 'TaskSubmission', default: null })
   submissionId: Types.ObjectId;

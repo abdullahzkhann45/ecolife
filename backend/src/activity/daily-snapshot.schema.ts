@@ -5,8 +5,8 @@ export type DailySnapshotDocument = DailySnapshot & Document;
 
 @Schema({ timestamps: true })
 export class DailySnapshot {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true })
+  userId: string;
 
   @Prop({ required: true })
   date: string;

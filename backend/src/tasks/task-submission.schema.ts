@@ -13,8 +13,8 @@ export enum SubmissionStatus {
 
 @Schema({ timestamps: true })
 export class TaskSubmission {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  @Prop({ required: true })
+  userId: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Task', required: true })
   taskId: Types.ObjectId;
