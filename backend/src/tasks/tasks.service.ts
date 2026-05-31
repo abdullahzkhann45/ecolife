@@ -5,6 +5,7 @@ import { Task, TaskDocument, TaskCategory, VerificationMechanism } from './task.
 import { TaskSubmission, TaskSubmissionDocument, SubmissionStatus } from './task-submission.schema';
 import { TaskCommitment, TaskCommitmentDocument } from './task-commitment.schema';
 import { GpsSession, GpsSessionDocument } from './gps-session.schema';
+import { UserProgress, UserProgressDocument, RANKS } from './user-progress.schema';
 import { OnboardingResponse, OnboardingResponseDocument } from '../onboarding/onboarding-response.schema';
 import { PointsService } from '../points/points.service';
 import { StreaksService } from '../streaks/streaks.service';
@@ -348,6 +349,7 @@ export class TasksService implements OnModuleInit {
     @InjectModel(TaskSubmission.name) private submissionModel: Model<TaskSubmissionDocument>,
     @InjectModel(TaskCommitment.name) private commitmentModel: Model<TaskCommitmentDocument>,
     @InjectModel(GpsSession.name) private gpsSessionModel: Model<GpsSessionDocument>,
+    @InjectModel(UserProgress.name) private progressModel: Model<UserProgressDocument>,
     @InjectModel(OnboardingResponse.name) private onboardingModel: Model<OnboardingResponseDocument>,
     private pointsService: PointsService,
     private streaksService: StreaksService,
@@ -393,31 +395,176 @@ export class TasksService implements OnModuleInit {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // PERSONALIZED TASK POOL
+  // CHAPTER-BASED TASK SYSTEM
   // ══════════════════════════════════════════════════════════════════
 
-  async getTodaysTasks(userId: string) {
-    const tasks = await this.getPersonalizedTaskPool(userId);
-    const today = new Date().toISOString().slice(0, 10);
-    const todaySubmissions = await this.submissionModel.find({ userId });
-    const completedTodayIds = new Set(
-      todaySubmissions
-        .filter(s => (s as any).createdAt?.toISOString().slice(0, 10) === today && s.status === SubmissionStatus.APPROVED)
-        .map(s => s.taskId.toString()),
-    );
+  static readonly DAYS_PER_CHAPTER = 5;
+  static readonly TASKS_PER_DAY = 5;
 
+  async getTodaysTasks(userId: string) {
+    const progress = await this.getOrCreateProgress(userId);
+    const pool = await this.getPersonalizedTaskPool(userId);
+
+    // Generate chapter plan if not yet created
+    if (!progress.chapterPlan) {
+      progress.chapterPlan = JSON.stringify(this.generateChapterPlan(pool, userId, progress.currentChapter));
+      progress.dayStartedAt = new Date();
+      await progress.save();
+    }
+
+    const chapterPlan: string[][] = JSON.parse(progress.chapterPlan);
+    const dayTaskIds = chapterPlan[progress.currentDay] || [];
+    const completedIds = new Set<string>(JSON.parse(progress.dayCompletedTaskIds || '[]'));
+    const chapterCompletedDays: number[] = JSON.parse(progress.chapterCompletedDays || '[]');
+
+    // Resolve task documents for today's assigned tasks
+    const allTasks = await this.taskModel.find({ isActive: true });
+    const taskMap = new Map(allTasks.map(t => [t._id.toString(), t]));
     const commitments = await this.commitmentModel.find({ userId, isActive: true });
     const committedIds = new Set(commitments.map(c => c.taskId.toString()));
 
-    const available = tasks.filter(t => !completedTodayIds.has(t._id.toString()));
-    const daily = this.pickDailyTasks(available, userId, today);
+    const todayTasks = dayTaskIds
+      .map(id => taskMap.get(id))
+      .filter(Boolean)
+      .map(t => ({
+        ...t!.toObject(),
+        id: t!._id.toString(),
+        completedToday: completedIds.has(t!._id.toString()),
+        committed: committedIds.has(t!._id.toString()),
+      }));
 
-    return daily.map(t => ({
-      ...t.toObject(),
-      id: t._id.toString(),
-      completedToday: completedTodayIds.has(t._id.toString()),
-      committed: committedIds.has(t._id.toString()),
-    }));
+    // Compute rank
+    const rankInfo = RANKS[Math.min(progress.chaptersCompleted, RANKS.length - 1)];
+
+    // Check if day is complete
+    const dayComplete = dayTaskIds.length > 0 && dayTaskIds.every(id => completedIds.has(id));
+    // Check if chapter is complete
+    const chapterComplete = chapterCompletedDays.length >= TasksService.DAYS_PER_CHAPTER;
+
+    return {
+      chapter: progress.currentChapter + 1,      // 1-indexed for display
+      chapterTitle: `Chapter ${progress.currentChapter + 1}`,
+      day: progress.currentDay + 1,               // 1-indexed for display
+      dayOf: TasksService.DAYS_PER_CHAPTER,
+      dayComplete,
+      chapterComplete,
+      chaptersCompleted: progress.chaptersCompleted,
+      rank: rankInfo,
+      tasks: todayTasks,
+      totalTasksToday: dayTaskIds.length,
+      completedTasksToday: completedIds.size,
+    };
+  }
+
+  /** After a task submission is approved, check if day/chapter should advance */
+  private async checkAndAdvanceProgress(userId: string, taskId: string) {
+    const progress = await this.progressModel.findOne({ userId });
+    if (!progress || !progress.chapterPlan) return;
+
+    const chapterPlan: string[][] = JSON.parse(progress.chapterPlan);
+    const dayTaskIds = chapterPlan[progress.currentDay] || [];
+    const completedIds: string[] = JSON.parse(progress.dayCompletedTaskIds || '[]');
+
+    // Add this task if it's in today's plan
+    if (dayTaskIds.includes(taskId) && !completedIds.includes(taskId)) {
+      completedIds.push(taskId);
+      progress.dayCompletedTaskIds = JSON.stringify(completedIds);
+    }
+
+    // Check if all day tasks are complete
+    const dayComplete = dayTaskIds.length > 0 && dayTaskIds.every(id => completedIds.includes(id));
+    if (dayComplete) {
+      const chapterDays: number[] = JSON.parse(progress.chapterCompletedDays || '[]');
+      if (!chapterDays.includes(progress.currentDay)) {
+        chapterDays.push(progress.currentDay);
+        progress.chapterCompletedDays = JSON.stringify(chapterDays);
+      }
+
+      // Check if entire chapter is done
+      if (chapterDays.length >= TasksService.DAYS_PER_CHAPTER) {
+        // Advance to next chapter
+        progress.chaptersCompleted += 1;
+        progress.currentChapter += 1;
+        progress.currentDay = 0;
+        progress.dayCompletedTaskIds = '[]';
+        progress.chapterCompletedDays = '[]';
+        // Generate next chapter plan
+        const pool = await this.getPersonalizedTaskPool(userId);
+        progress.chapterPlan = JSON.stringify(this.generateChapterPlan(pool, userId, progress.currentChapter));
+        progress.dayStartedAt = new Date();
+        this.logger.log(`User ${userId} completed Chapter ${progress.currentChapter}! Rank: ${RANKS[Math.min(progress.chaptersCompleted, RANKS.length - 1)].title}`);
+      } else {
+        // Advance to next day
+        progress.currentDay += 1;
+        progress.dayCompletedTaskIds = '[]';
+        progress.dayStartedAt = new Date();
+        this.logger.log(`User ${userId} completed Day ${progress.currentDay} of Chapter ${progress.currentChapter + 1}`);
+      }
+    }
+
+    await progress.save();
+  }
+
+  /** Generate a 5-day plan from the user's task pool with no overlap */
+  private generateChapterPlan(pool: TaskDocument[], userId: string, chapterNum: number): string[][] {
+    const taskIds = pool.map(t => t._id.toString());
+
+    // Deterministic shuffle based on userId + chapter number
+    const seed = this.hash(`${userId}:chapter:${chapterNum}`);
+    const shuffled = [...taskIds].sort((a, b) => this.hash(`${seed}:${a}`) - this.hash(`${seed}:${b}`));
+
+    const days: string[][] = [];
+    const perDay = TasksService.TASKS_PER_DAY;
+    const totalDays = TasksService.DAYS_PER_CHAPTER;
+
+    for (let d = 0; d < totalDays; d++) {
+      const start = d * perDay;
+      let dayTasks = shuffled.slice(start, start + perDay);
+
+      // If we've exhausted the pool, wrap around with a different shuffle
+      if (dayTasks.length < perDay) {
+        const wrapSeed = this.hash(`${seed}:wrap:${d}`);
+        const rewrapped = [...taskIds].sort((a, b) => this.hash(`${wrapSeed}:${a}`) - this.hash(`${wrapSeed}:${b}`));
+        // Pick tasks not already used in THIS chapter
+        const usedInChapter = new Set(days.flat());
+        const available = rewrapped.filter(id => !usedInChapter.has(id));
+        const extra = available.slice(0, perDay - dayTasks.length);
+        dayTasks = dayTasks.concat(extra);
+
+        // If still not enough (very small pool), allow repeats from earlier days
+        if (dayTasks.length < perDay) {
+          const fillers = rewrapped.filter(id => !dayTasks.includes(id)).slice(0, perDay - dayTasks.length);
+          dayTasks = dayTasks.concat(fillers);
+        }
+      }
+
+      days.push(dayTasks);
+    }
+
+    return days;
+  }
+
+  private async getOrCreateProgress(userId: string): Promise<UserProgressDocument> {
+    let progress = await this.progressModel.findOne({ userId });
+    if (!progress) {
+      progress = await this.progressModel.create({ userId });
+    }
+    return progress;
+  }
+
+  /** Get user's current progress info (for profile/stats) */
+  async getUserProgress(userId: string) {
+    const progress = await this.getOrCreateProgress(userId);
+    const rankInfo = RANKS[Math.min(progress.chaptersCompleted, RANKS.length - 1)];
+    const nextRank = RANKS[Math.min(progress.chaptersCompleted + 1, RANKS.length - 1)];
+    return {
+      currentChapter: progress.currentChapter + 1,
+      currentDay: progress.currentDay + 1,
+      daysPerChapter: TasksService.DAYS_PER_CHAPTER,
+      chaptersCompleted: progress.chaptersCompleted,
+      rank: rankInfo,
+      nextRank: rankInfo !== nextRank ? nextRank : null,
+    };
   }
 
   async getPersonalizedTaskPool(userId: string) {
@@ -570,22 +717,7 @@ export class TasksService implements OnModuleInit {
     return { lifestyleType: lifestyle, tags };
   }
 
-  private pickDailyTasks(tasks: TaskDocument[], userId: string, dateKey: string) {
-    // Pick 1 per category, then fill to 7
-    const grouped = new Map<string, TaskDocument[]>();
-    for (const task of tasks) {
-      grouped.set(task.category, [...(grouped.get(task.category) || []), task]);
-    }
-    const seed = this.hash(`${userId}:${dateKey}`);
-    const selected: TaskDocument[] = [];
-    for (const [, categoryTasks] of grouped) {
-      const sorted = [...categoryTasks].sort((a, b) => this.hash(`${seed}:${a._id}`) - this.hash(`${seed}:${b._id}`));
-      if (sorted[0]) selected.push(sorted[0]);
-    }
-    const remaining = tasks.filter(t => !selected.some(s => s._id.toString() === t._id.toString()))
-      .sort((a, b) => this.hash(`${seed}:r:${a._id}`) - this.hash(`${seed}:r:${b._id}`));
-    return selected.concat(remaining).slice(0, 7);
-  }
+  // pickDailyTasks removed — replaced by chapter-based generateChapterPlan
 
   // ══════════════════════════════════════════════════════════════════
   // HELPERS
@@ -610,10 +742,14 @@ export class TasksService implements OnModuleInit {
     }
   }
 
+  /** FNV-1a hash — much better distribution than simple multiply-add */
   private hash(value: string) {
-    let h = 0;
-    for (let i = 0; i < value.length; i++) h = Math.imul(31, h) + value.charCodeAt(i) | 0;
-    return Math.abs(h);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < value.length; i++) {
+      h ^= value.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0); // unsigned 32-bit
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -676,6 +812,7 @@ export class TasksService implements OnModuleInit {
     submission.pointsAwarded = points;
     await submission.save();
     await this.streaksService.recordCompletion(userId);
+    await this.checkAndAdvanceProgress(userId, task._id.toString());
 
     return {
       submission, status: SubmissionStatus.APPROVED, pointsAwarded: points,
@@ -719,6 +856,7 @@ export class TasksService implements OnModuleInit {
       submission.pointsAwarded = points;
       await submission.save();
       await this.streaksService.recordCompletion(userId);
+      await this.checkAndAdvanceProgress(userId, task._id.toString());
     }
 
     return { submission, status: newStatus, pointsAwarded: submission.pointsAwarded || 0, aiConfidence, rejectionReason };
@@ -780,6 +918,7 @@ export class TasksService implements OnModuleInit {
       submission.pointsAwarded = points;
       await submission.save();
       await this.streaksService.recordCompletion(userId);
+      await this.checkAndAdvanceProgress(userId, task._id.toString());
     }
 
     await this.gpsSessionModel.create({

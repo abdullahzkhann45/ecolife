@@ -26,6 +26,9 @@ export class TasksController {
   @Get('commitment-progress')
   getProgress(@Request() req) { return this.tasksService.getCommitmentProgress(req.user.id); }
 
+  @Get('progress')
+  getUserProgress(@Request() req) { return this.tasksService.getUserProgress(req.user.id); }
+
   @Get(':id')
   getTask(@Param('id') id: string) { return this.tasksService.getTaskById(id); }
 
