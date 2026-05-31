@@ -338,6 +338,170 @@ export const SEED_TASKS: SeedTask[] = [
     tags: ['garden', 'rural', 'semi_urban', 'has_plants'],
     difficulty: 1, lifestyles: ['all'],
   },
+
+  // -- EXPANDED PERSONALIZED POOL --
+  {
+    title: 'Combine two nearby errands into one trip',
+    description: 'Plan your bazaar, pharmacy, or bank run together so you avoid an extra ride later.',
+    category: TaskCategory.TRANSPORT, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 55, co2SavedGrams: 700,
+    proofInstructions: 'Rate how well you combined errands instead of making separate trips.',
+    tags: ['drives_regularly', 'market_shopper', 'short_commute', 'family_home'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Walk to a nearby mosque, shop, or neighbour',
+    description: 'For a very short local visit, walk instead of taking a motorcycle or rickshaw.',
+    category: TaskCategory.TRANSPORT, verificationMechanism: VerificationMechanism.GEO,
+    basePoints: 65, co2SavedGrams: 900,
+    proofInstructions: 'Track the short walking trip with GPS.',
+    tags: ['drives_regularly', 'short_commute', 'market_shopper', 'semi_urban', 'rural'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Use a shared rickshaw or qingqi instead of a solo ride',
+    description: 'Pick a shared ride option for a short urban or semi-urban trip.',
+    category: TaskCategory.TRANSPORT, verificationMechanism: VerificationMechanism.GEO,
+    basePoints: 75, co2SavedGrams: 900,
+    proofInstructions: 'Track the trip and upload a vehicle/ticket photo if available.',
+    tags: ['drives_regularly', 'long_commute', 'urban', 'semi_urban', 'public_transport_user'],
+    difficulty: 1, lifestyles: ['urban_affluent', 'urban_middle', 'semi_urban'],
+  },
+  {
+    title: 'Turn leftovers into the next meal',
+    description: 'Use leftover roti, rice, daal, or sabzi instead of ordering or wasting food.',
+    category: TaskCategory.DIET, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 65, co2SavedGrams: 500, wasteDivertedGrams: 250,
+    proofInstructions: 'Photo of the leftover-based meal or saved food container.',
+    geminiPromptHint: 'Look for leftovers reused as a meal: roti, rice, daal, sabzi, paratha, or food stored in containers.',
+    tags: ['cooks_at_home', 'family_home', 'student', 'orders_food'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Buy loose daal, rice, or spices instead of packaged',
+    description: 'Choose loose staples from a kirana shop to avoid extra plastic packaging.',
+    category: TaskCategory.DIET, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 70, wasteDivertedGrams: 80,
+    proofInstructions: 'Photo of loose staples being weighed or packed in your own container/bag.',
+    geminiPromptHint: 'Look for loose grains, daal, rice, spices, weighing scales, or kirana sacks.',
+    tags: ['market_shopper', 'cooks_at_home', 'kirana', 'family_home'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Skip food delivery packaging today',
+    description: 'Choose home food, mess food, or dine-in instead of delivery packaging.',
+    category: TaskCategory.DIET, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 55, co2SavedGrams: 400, wasteDivertedGrams: 120,
+    proofInstructions: 'Rate how fully you avoided delivery packaging today.',
+    tags: ['orders_food', 'student', 'office_worker', 'frequent_shopper'],
+    difficulty: 1, lifestyles: ['urban_affluent', 'urban_middle'],
+  },
+  {
+    title: 'Set AC to 26C or use fan-first cooling',
+    description: 'Keep cooling efficient by setting the AC higher or using fans before AC.',
+    category: TaskCategory.ENERGY, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 65, co2SavedGrams: 900,
+    proofInstructions: 'Rate how consistently you used efficient cooling today.',
+    tags: ['uses_ac', 'uses_cooler', 'urban'],
+    difficulty: 1, lifestyles: ['urban_affluent', 'urban_middle'],
+  },
+  {
+    title: 'Run laundry only as a full load',
+    description: 'Wait until clothes make a full load before using the washing machine.',
+    category: TaskCategory.ENERGY, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 45, co2SavedGrams: 250, waterSavedLiters: 25,
+    proofInstructions: 'Rate how well you avoided small laundry loads.',
+    tags: ['family_home', 'hostel', 'urban', 'semi_urban'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Iron clothes in one batch',
+    description: 'Heat the iron once and finish all clothes together instead of reheating again later.',
+    category: TaskCategory.ENERGY, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 40, co2SavedGrams: 200,
+    proofInstructions: 'Rate how well you batched ironing today.',
+    tags: ['student', 'office_worker', 'family_home'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Collect RO/filter reject water for cleaning',
+    description: 'Use leftover filter water for mopping, plants, or washing instead of throwing it away.',
+    category: TaskCategory.WATER, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 70, waterSavedLiters: 15,
+    proofInstructions: 'Photo of collected filter reject water being reused.',
+    geminiPromptHint: 'Look for a water filter/RO outlet, bucket, bottle, or container collecting reject water.',
+    tags: ['buys_bottled_water', 'urban', 'family_home', 'hostel'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Wash bike or car with a bucket',
+    description: 'Use a bucket and cloth instead of a running hose for vehicle washing.',
+    category: TaskCategory.WATER, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 75, waterSavedLiters: 60,
+    proofInstructions: 'Photo of bucket washing setup near the bike or car.',
+    geminiPromptHint: 'Look for a bucket, cloth, sponge, bike/car, and no running hose.',
+    tags: ['drives_regularly', 'car_owner', 'family_home', 'rural', 'semi_urban'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Cover stored drinking water',
+    description: 'Keep matka, cooler, or stored drinking water covered to reduce waste and contamination.',
+    category: TaskCategory.WATER, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 35, waterSavedLiters: 5,
+    proofInstructions: 'Photo of covered matka, cooler, dispenser, or stored water container.',
+    geminiPromptHint: 'Look for covered drinking water storage: matka, cooler, dispenser, drum, or bottle container.',
+    tags: ['uses_matka', 'uses_water_cooler', 'family_home', 'hostel', 'rural'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Keep a dry recyclables corner for kabari pickup',
+    description: 'Put bottles, paper, cans, and cardboard in one dry corner so they stay valuable for kabari.',
+    category: TaskCategory.WASTE, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 85, wasteDivertedGrams: 900,
+    proofInstructions: 'Photo of a dry recyclables corner or box.',
+    geminiPromptHint: 'Look for dry bottles, cans, paper, or cardboard grouped separately from wet waste.',
+    tags: ['no_recycling', 'some_recycling', 'already_recycles', 'family_home', 'hostel'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Use a container instead of foil or plastic wrap',
+    description: 'Store leftovers in a reusable dabba instead of disposable foil or plastic wrap.',
+    category: TaskCategory.WASTE, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 45, wasteDivertedGrams: 35,
+    proofInstructions: 'Photo of food stored in a reusable container.',
+    geminiPromptHint: 'Look for reusable food containers, lunch boxes, or steel/plastic dabbas holding food.',
+    tags: ['cooks_at_home', 'family_home', 'student', 'orders_food'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Refill shampoo, detergent, or cleaner bottle',
+    description: 'Use a refill pouch or refill station instead of buying another hard plastic bottle.',
+    category: TaskCategory.CONSUMPTION, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 65, wasteDivertedGrams: 120,
+    proofInstructions: 'Photo of a refilled bottle or refill pouch being used.',
+    geminiPromptHint: 'Look for a reused detergent, shampoo, dish soap, or cleaner bottle with refill packaging nearby.',
+    tags: ['frequent_shopper', 'family_home', 'supermarket_shopper', 'market_shopper'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Borrow or share an item instead of buying',
+    description: 'Borrow a tool, book, charger, or household item for a one-time need.',
+    category: TaskCategory.CONSUMPTION, verificationMechanism: VerificationMechanism.SELF_ATTEST, selfRatingEnabled: true,
+    basePoints: 55, co2SavedGrams: 900,
+    proofInstructions: 'Rate how well you avoided buying a one-time-use item.',
+    tags: ['student', 'hostel', 'frequent_shopper', 'minimal_shopper', 'family_home'],
+    difficulty: 1, lifestyles: ['all'],
+  },
+  {
+    title: 'Mend a torn shirt, dupatta, or bag',
+    description: 'Do a small repair so the item stays useful instead of being replaced.',
+    category: TaskCategory.CONSUMPTION, verificationMechanism: VerificationMechanism.PHOTO,
+    basePoints: 80, co2SavedGrams: 1200, wasteDivertedGrams: 300,
+    proofInstructions: 'Photo of the repaired clothing, bag, or stitching.',
+    geminiPromptHint: 'Look for stitching, patching, sewing tools, or a visible repair on fabric or a bag.',
+    tags: ['minimal_shopper', 'frequent_shopper', 'family_home', 'student'],
+    difficulty: 1, lifestyles: ['all'],
+  },
 ];
 
 @Injectable()
@@ -363,25 +527,23 @@ export class TasksService implements OnModuleInit {
       await this.taskModel.insertMany(SEED_TASKS.map(t => this.seedToDoc(t)));
       this.logger.log(`Seeded ${SEED_TASKS.length} tasks`);
     } else {
-      // Force-sync tags/difficulty/lifestyles for every task on every startup
-      await this.syncTaskTags();
+      // Force-sync the catalog so new task definitions are inserted after deploys.
+      await this.syncTaskCatalog();
     }
   }
 
-  /** Overwrite taskTags, lifestyleTypes on existing DB rows so they're never null */
-  private async syncTaskTags() {
+  /** Upsert task catalog definitions so MongoDB stays aligned with the code catalog. */
+  private async syncTaskCatalog() {
     let synced = 0;
     for (const seed of SEED_TASKS) {
       const result = await this.taskModel.updateOne(
         { title: seed.title },
-        { $set: {
-          taskTags: JSON.stringify(seed.tags),
-          lifestyleTypes: JSON.stringify(seed.lifestyles),
-        }},
+        { $set: this.seedToDoc(seed) },
+        { upsert: true },
       );
-      if (result.modifiedCount > 0) synced++;
+      if (result.modifiedCount > 0 || result.upsertedCount > 0) synced++;
     }
-    if (synced > 0) this.logger.log(`Synced tags for ${synced} tasks`);
+    if (synced > 0) this.logger.log(`Synced task catalog entries: ${synced}`);
   }
 
   private seedToDoc(seed: SeedTask) {
@@ -404,11 +566,15 @@ export class TasksService implements OnModuleInit {
   async getTodaysTasks(userId: string) {
     const progress = await this.getOrCreateProgress(userId);
     const pool = await this.getPersonalizedTaskPool(userId);
+    const poolSignature = this.getTaskPoolSignature(pool);
 
-    // Generate chapter plan if not yet created
-    if (!progress.chapterPlan) {
+    // Generate or refresh the chapter plan when questionnaire/catalog changes alter the pool.
+    if (!progress.chapterPlan || progress.taskPoolSignature !== poolSignature) {
       progress.chapterPlan = JSON.stringify(this.generateChapterPlan(pool, userId, progress.currentChapter));
+      progress.taskPoolSignature = poolSignature;
       progress.dayStartedAt = new Date();
+      progress.dayCompletedTaskIds = '[]';
+      progress.chapterCompletedDays = '[]';
       await progress.save();
     }
 
@@ -490,6 +656,7 @@ export class TasksService implements OnModuleInit {
         progress.chapterCompletedDays = '[]';
         // Generate next chapter plan
         const pool = await this.getPersonalizedTaskPool(userId);
+        progress.taskPoolSignature = this.getTaskPoolSignature(pool);
         progress.chapterPlan = JSON.stringify(this.generateChapterPlan(pool, userId, progress.currentChapter));
         progress.dayStartedAt = new Date();
         this.logger.log(`User ${userId} completed Chapter ${progress.currentChapter}! Rank: ${RANKS[Math.min(progress.chaptersCompleted, RANKS.length - 1)].title}`);
@@ -505,43 +672,63 @@ export class TasksService implements OnModuleInit {
     await progress.save();
   }
 
-  /** Generate a 5-day plan from the user's task pool with no overlap */
+  /** Generate a 5-day plan from the user's task pool with category variety and no forced repeats. */
   private generateChapterPlan(pool: TaskDocument[], userId: string, chapterNum: number): string[][] {
     const taskIds = pool.map(t => t._id.toString());
+    if (taskIds.length === 0) return Array.from({ length: TasksService.DAYS_PER_CHAPTER }, () => []);
 
-    // Deterministic shuffle based on userId + chapter number
+    // Deterministic shuffle based on userId + chapter number.
     const seed = this.hash(`${userId}:chapter:${chapterNum}`);
-    const shuffled = [...taskIds].sort((a, b) => this.hash(`${seed}:${a}`) - this.hash(`${seed}:${b}`));
+    const tasksById = new Map(pool.map(task => [task._id.toString(), task]));
+    const categories = Array.from(new Set(pool.map(task => task.category)));
+    const buckets = new Map<string, string[]>();
+    for (const category of categories) {
+      buckets.set(
+        category,
+        taskIds
+          .filter(id => tasksById.get(id)?.category === category)
+          .sort((a, b) => this.hash(`${seed}:${category}:${a}`) - this.hash(`${seed}:${category}:${b}`)),
+      );
+    }
 
+    const perDay = Math.min(
+      TasksService.TASKS_PER_DAY,
+      Math.max(1, Math.floor(taskIds.length / TasksService.DAYS_PER_CHAPTER)),
+    );
     const days: string[][] = [];
-    const perDay = TasksService.TASKS_PER_DAY;
-    const totalDays = TasksService.DAYS_PER_CHAPTER;
+    const usedInChapter = new Set<string>();
 
-    for (let d = 0; d < totalDays; d++) {
-      const start = d * perDay;
-      let dayTasks = shuffled.slice(start, start + perDay);
+    for (let d = 0; d < TasksService.DAYS_PER_CHAPTER; d++) {
+      const dayTasks: string[] = [];
+      const categoryOrder = [...categories].sort(
+        (a, b) => this.hash(`${seed}:day:${d}:${a}`) - this.hash(`${seed}:day:${d}:${b}`),
+      );
 
-      // If we've exhausted the pool, wrap around with a different shuffle
-      if (dayTasks.length < perDay) {
-        const wrapSeed = this.hash(`${seed}:wrap:${d}`);
-        const rewrapped = [...taskIds].sort((a, b) => this.hash(`${wrapSeed}:${a}`) - this.hash(`${wrapSeed}:${b}`));
-        // Pick tasks not already used in THIS chapter
-        const usedInChapter = new Set(days.flat());
-        const available = rewrapped.filter(id => !usedInChapter.has(id));
-        const extra = available.slice(0, perDay - dayTasks.length);
-        dayTasks = dayTasks.concat(extra);
-
-        // If still not enough (very small pool), allow repeats from earlier days
-        if (dayTasks.length < perDay) {
-          const fillers = rewrapped.filter(id => !dayTasks.includes(id)).slice(0, perDay - dayTasks.length);
-          dayTasks = dayTasks.concat(fillers);
+      while (dayTasks.length < perDay) {
+        let added = false;
+        for (const category of categoryOrder) {
+          const bucket = buckets.get(category) || [];
+          const next = bucket.find(id => !usedInChapter.has(id) && !dayTasks.includes(id));
+          if (!next) continue;
+          dayTasks.push(next);
+          usedInChapter.add(next);
+          added = true;
+          if (dayTasks.length >= perDay) break;
         }
+        if (!added) break;
       }
 
       days.push(dayTasks);
     }
 
     return days;
+  }
+
+  private getTaskPoolSignature(pool: TaskDocument[]) {
+    return pool
+      .map(task => `${task._id.toString()}:${task.category}:${task.taskTags || ''}:${task.lifestyleTypes || ''}`)
+      .sort()
+      .join('|');
   }
 
   private async getOrCreateProgress(userId: string): Promise<UserProgressDocument> {

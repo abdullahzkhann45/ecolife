@@ -49,6 +49,10 @@ export class UserProgress {
   @Prop({ default: null })
   chapterPlan: string;
 
+  /** Signature of the personalized pool used to build the current chapter plan */
+  @Prop({ default: null })
+  taskPoolSignature: string;
+
   /** Date when current day was first started (to track day boundaries) */
   @Prop({ default: null })
   dayStartedAt: Date;
