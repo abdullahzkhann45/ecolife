@@ -46,7 +46,7 @@ export class PointsService {
     let points = Math.round(scaledBasePoints * multiplier);
     points = Math.min(points, DAILY_CAP - dailyEarned);
 
-    await this.addEntry(userId, LedgerEventType.TASK_COMPLETION, points, submissionId, null,
+    await this.addEntry(userId, LedgerEventType.TASK_COMPLETION, points, submissionId,
       `Completed: ${task.title}`);
 
     return points;
@@ -61,7 +61,7 @@ export class PointsService {
     let points = Math.round(task.basePoints * multiplier);
     points = Math.min(points, DAILY_CAP - dailyEarned);
 
-    await this.addEntry(userId, LedgerEventType.TASK_COMPLETION, points, submissionId, null,
+    await this.addEntry(userId, LedgerEventType.TASK_COMPLETION, points, submissionId,
       `Completed: ${task.title}`);
 
     // First category completion bonus
@@ -70,7 +70,7 @@ export class PointsService {
     if (!hasCategoryBonus) {
       const bonus = Math.min(100, DAILY_CAP - dailyEarned - points);
       if (bonus > 0) {
-        await this.addEntry(userId, LedgerEventType.FIRST_CATEGORY_BONUS, bonus, null, null,
+        await this.addEntry(userId, LedgerEventType.FIRST_CATEGORY_BONUS, bonus, null,
           `First ${task.category} task bonus!`);
         points += bonus;
       }
@@ -80,15 +80,8 @@ export class PointsService {
   }
 
   async awardMilestoneBonus(userId: string, milestone: number, bonusPoints: number) {
-    await this.addEntry(userId, LedgerEventType.STREAK_MILESTONE, bonusPoints, null, null,
+    await this.addEntry(userId, LedgerEventType.STREAK_MILESTONE, bonusPoints, null,
       `${milestone}-day streak milestone!`);
-  }
-
-  async spendPoints(userId: string, shopItemId: string, amount: number, itemName: string) {
-    const balance = await this.getBalance(userId);
-    if (balance < amount) throw new Error('Insufficient points');
-    await this.addEntry(userId, LedgerEventType.PURCHASE, -amount, null, shopItemId,
-      `Purchased: ${itemName}`);
   }
 
   private async addEntry(
@@ -96,9 +89,8 @@ export class PointsService {
     eventType: LedgerEventType,
     amount: number,
     taskSubmissionId: string | null,
-    shopItemId: string | null,
     description: string,
   ) {
-    return this.ledgerModel.create({ userId, eventType, amount, taskSubmissionId, shopItemId, description });
+    return this.ledgerModel.create({ userId, eventType, amount, taskSubmissionId, description });
   }
 }

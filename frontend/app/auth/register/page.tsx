@@ -62,7 +62,7 @@ export default function RegisterPage() {
               {[
                 { tag: '01', t: 'Personalized baseline', d: 'Profile your habits in 3 minutes.' },
                 { tag: '02', t: 'Verified daily tasks', d: 'Photo, sensor, geo, or receipt proof.' },
-                { tag: '03', t: 'Earn & redeem', d: 'Points, streaks, real-world rewards.' },
+                { tag: '03', t: 'Earn points', d: 'Points, streaks, and progress history.' },
               ].map(item => (
                 <div key={item.tag} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
                   <span className="mono" style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}>§ {item.tag}</span>

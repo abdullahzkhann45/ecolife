@@ -93,7 +93,7 @@ export default function HomePage() {
           </div>
           <div className="label">Points balance</div>
           <div className="value">{(points?.balance ?? 0).toLocaleString()}<span className="unit">PTS</span></div>
-          <div className="sub">All-time earned · spend in shop</div>
+          <div className="sub">All-time earned through verified tasks</div>
         </div>
 
         <div className="stat-tile leaf">

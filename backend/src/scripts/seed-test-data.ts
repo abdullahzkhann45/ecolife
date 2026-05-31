@@ -14,8 +14,6 @@ import { TaskCommitment, TaskCommitmentSchema } from '../tasks/task-commitment.s
 import { Streak, StreakSchema } from '../streaks/streak.schema';
 import { PointsLedger, PointsLedgerSchema, LedgerEventType } from '../points/points-ledger.schema';
 import { Friendship, FriendshipSchema, FriendshipStatus } from '../friends/friendship.schema';
-import { ShopItem, ShopItemSchema, ShopItemType } from '../shop/shop-item.schema';
-import { Inventory, InventorySchema } from '../shop/inventory.schema';
 import { OnboardingResponse, OnboardingResponseSchema } from '../onboarding/onboarding-response.schema';
 import { DailySnapshot, DailySnapshotSchema } from '../activity/daily-snapshot.schema';
 import { calculatePakistanBaseline, classifyLifestyle, PAKISTAN_QUESTIONS } from '../onboarding/pakistan-questionnaire';
@@ -174,8 +172,6 @@ async function main() {
   const StreakModel = mongoose.model(Streak.name, StreakSchema) as any;
   const LedgerModel = mongoose.model(PointsLedger.name, PointsLedgerSchema) as any;
   const FriendshipModel = mongoose.model(Friendship.name, FriendshipSchema) as any;
-  const ShopModel = mongoose.model(ShopItem.name, ShopItemSchema) as any;
-  const InventoryModel = mongoose.model(Inventory.name, InventorySchema) as any;
   const OnboardingModel = mongoose.model(OnboardingResponse.name, OnboardingResponseSchema) as any;
   const SnapshotModel = mongoose.model(DailySnapshot.name, DailySnapshotSchema) as any;
 
@@ -184,17 +180,17 @@ async function main() {
   const existingUsers = await UserModel.find({ email: { $in: testEmails } });
   if (existingUsers.length > 0) {
     const ids = existingUsers.map((u: any) => u._id);
+    const userKeys = ids.concat(ids.map((id: any) => id.toString()));
     console.log(`Cleaning ${ids.length} existing test users...`);
     await Promise.all([
       UserModel.deleteMany({ _id: { $in: ids } }),
-      OnboardingModel.deleteMany({ userId: { $in: ids } }),
-      SubmissionModel.deleteMany({ userId: { $in: ids } }),
-      CommitmentModel.deleteMany({ userId: { $in: ids } }),
-      StreakModel.deleteMany({ userId: { $in: ids } }),
-      LedgerModel.deleteMany({ userId: { $in: ids } }),
-      FriendshipModel.deleteMany({ $or: [{ requesterId: { $in: ids } }, { addresseeId: { $in: ids } }] }),
-      InventoryModel.deleteMany({ userId: { $in: ids } }),
-      SnapshotModel.deleteMany({ userId: { $in: ids } }),
+      OnboardingModel.deleteMany({ userId: { $in: userKeys } }),
+      SubmissionModel.deleteMany({ userId: { $in: userKeys } }),
+      CommitmentModel.deleteMany({ userId: { $in: userKeys } }),
+      StreakModel.deleteMany({ userId: { $in: userKeys } }),
+      LedgerModel.deleteMany({ userId: { $in: userKeys } }),
+      FriendshipModel.deleteMany({ $or: [{ requesterId: { $in: userKeys } }, { addresseeId: { $in: userKeys } }] }),
+      SnapshotModel.deleteMany({ userId: { $in: userKeys } }),
     ]);
   }
 
@@ -210,16 +206,6 @@ async function main() {
     console.log('Synced task tags');
   }
   const tasks = await TaskModel.find({ isActive: true });
-
-  // ── Ensure shop items exist ──
-  if (await ShopModel.countDocuments() === 0) {
-    await ShopModel.insertMany([
-      { name: 'Leaf Badge', description: 'Profile badge.', type: ShopItemType.COSMETIC, price: 200, imageEmoji: '🍃', isActive: true },
-      { name: 'Green Flame', description: 'Streak flame.', type: ShopItemType.COSMETIC, price: 500, imageEmoji: '🔥', isActive: true },
-      { name: 'Streak Freeze', description: 'Protect streak.', type: ShopItemType.BOOSTER, price: 300, imageEmoji: '🧊', isActive: true },
-    ]);
-  }
-  const shopItems = await ShopModel.find({ isActive: true });
 
   // ── Create users ──
   const passwordHash = await bcrypt.hash('TestUser123', 12);
@@ -325,17 +311,6 @@ async function main() {
     await FriendshipModel.create({ requesterId: createdUsers[a]._id.toString(), addresseeId: createdUsers[b]._id.toString(), status: FriendshipStatus.ACCEPTED });
   }
   console.log(`\n✓ Created ${pairs.length} friendships`);
-
-  // ── Shop purchases (users 0, 3, 5) ──
-  for (const idx of [0, 3, 5]) {
-    const user = createdUsers[idx];
-    const item = shopItems[idx % shopItems.length];
-    if (item) {
-      await LedgerModel.create({ userId: user._id.toString(), eventType: LedgerEventType.PURCHASE, amount: -(item.price || 200), shopItemId: item._id, description: `Purchased: ${item.name}` });
-      await InventoryModel.create({ userId: user._id.toString(), shopItemId: item._id.toString(), isEquipped: true, purchasedAt: daysAgo(3) });
-      console.log(`✓ ${profiles[idx].username} bought ${item.name}`);
-    }
-  }
 
   console.log('\n══════════════════════════════════════════════');
   console.log('Seed complete! Test accounts (password: TestUser123):');

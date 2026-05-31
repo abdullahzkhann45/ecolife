@@ -10,7 +10,6 @@ import { EcoScoreModule } from './eco-score/eco-score.module';
 import { StreaksModule } from './streaks/streaks.module';
 import { PointsModule } from './points/points.module';
 import { FriendsModule } from './friends/friends.module';
-import { ShopModule } from './shop/shop.module';
 import { ActivityModule } from './activity/activity.module';
 import { AdminModule } from './admin/admin.module';
 
@@ -47,7 +46,6 @@ import { AdminModule } from './admin/admin.module';
     StreaksModule,
     PointsModule,
     FriendsModule,
-    ShopModule,
     ActivityModule,
     AdminModule,
   ],

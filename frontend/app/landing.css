@@ -577,41 +577,6 @@
   color: rgba(239, 233, 215, 0.6);
 }
 
-/* Shop */
-.landing .shop-section { background: var(--paper-deep); }
-.landing .shop-head { margin-bottom: 56px; max-width: 800px; }
-.landing .shop-head h2 { font-size: clamp(56px, 6vw, 96px); margin: 0 0 14px; }
-.landing .shop-head h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
-.landing .shop-head p { font-size: 18px; max-width: 50ch; color: var(--mute); margin: 0; line-height: 1.5; }
-.landing .shop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-.landing .shop-card {
-  background: var(--paper); border-radius: 18px; padding: 18px;
-  border: 1px solid var(--hair);
-  transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.2, 1.4), box-shadow 0.2s;
-}
-.landing .shop-card:hover {
-  transform: translateY(-4px) rotate(-1deg);
-  box-shadow: 0 16px 32px -12px rgba(0,0,0,0.15);
-}
-.landing .shop-card-art {
-  aspect-ratio: 1; border-radius: 12px; margin-bottom: 14px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-}
-.landing .shop-card .name { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -0.02em; margin: 0 0 4px; }
-.landing .shop-card .type { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
-.landing .shop-card .price {
-  margin-top: 12px; display: flex; align-items: center; justify-content: space-between;
-  padding-top: 12px; border-top: 1px solid var(--hair);
-}
-.landing .shop-card .price .p { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.02em; }
-.landing .shop-card .price .b {
-  appearance: none; border: 0; background: var(--ink); color: var(--paper);
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
-  padding: 8px 12px; border-radius: 999px; cursor: pointer;
-}
-.landing .shop-card .price .b:hover { background: var(--accent); }
-
 /* CTA */
 .landing .cta { text-align: center; padding: 160px 0; position: relative; overflow: hidden; }
 .landing .cta-tag {
@@ -664,11 +629,9 @@
   .landing .score-grid, .landing .task-grid, .landing .lb {
     grid-template-columns: 1fr; gap: 48px;
   }
-  .landing .shop-grid { grid-template-columns: repeat(2, 1fr); }
   .landing .friends-head, .landing .score-head { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 600px) {
-  .landing .shop-grid { grid-template-columns: 1fr; }
   .landing .hero-title { font-size: clamp(48px, 10vw, 72px); }
   .landing .nav-links { display: none; }
 }

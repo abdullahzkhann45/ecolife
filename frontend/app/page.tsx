@@ -180,7 +180,6 @@ function Nav() {
           <a href="#streak">Streak</a>
           <a href="#score">Eco score</a>
           <a href="#friends">Friends</a>
-          <a href="#shop">Shop</a>
         </div>
         <Link href="/auth/login" className="btn btn-ghost" style={{ height: 40, fontSize: 13 }}>Sign in</Link>
       </div>
@@ -280,7 +279,7 @@ function Pitch() {
             <h2 className="display pitch-title">An app that<br />makes good<br />choices loud.</h2>
           </div>
           <div className="pitch-body">
-            <p>Most eco apps are quiet. You log a thing, the thing disappears, and a week later you&apos;ve forgotten the app exists. EcoLife is loud on purpose: every verified action moves a number, lights a streak, moves you up your friend group, and pays in points you spend on things you actually want.</p>
+            <p>Most eco apps are quiet. You log a thing, the thing disappears, and a week later you&apos;ve forgotten the app exists. EcoLife is loud on purpose: every verified action moves a number, lights a streak, moves you up your friend group, and leaves a clear points trail for your progress.</p>
             <p>Behind the noise sits a real model. A 3-minute onboarding questionnaire profiles your transport, diet, home energy, and waste habits — then ranks the changes that&apos;d move <em>your</em> numbers most.</p>
             <div className="pitch-stats">
               <div><div className="pitch-stat-n">3 min</div><div className="pitch-stat-l">Onboarding ceiling — first task ready in 60s after.</div></div>
@@ -338,7 +337,7 @@ function EcoScoreSection() {
   const cats = [
     { l: 'Transport', v: 78, c: 'leaf' }, { l: 'Diet', v: 64, c: '' },
     { l: 'Energy', v: 51, c: '' }, { l: 'Waste', v: 83, c: 'leaf' },
-    { l: 'Shopping', v: 42, c: 'accent' }, { l: 'Community', v: 71, c: '' },
+    { l: 'Consumption', v: 42, c: 'accent' }, { l: 'Community', v: 71, c: '' },
   ];
   const R = 44, C = 2 * Math.PI * R;
   const dash = `${C * (score / 1000)} ${C}`;
@@ -476,53 +475,6 @@ function Friends() {
   );
 }
 
-function ShopShape({ kind }: { kind: string }) {
-  const c = 'rgba(255,255,255,0.92)';
-  if (kind === 'flame') return <svg width="50%" height="70%" viewBox="0 0 100 140" fill={c}><path d="M50 0 C 80 30 90 60 80 90 C 90 95 95 110 90 125 C 80 140 60 140 50 140 C 40 140 20 140 10 125 C 5 110 10 95 20 90 C 10 60 20 30 50 0 Z" /></svg>;
-  if (kind === 'blob') return <svg width="70%" height="70%" viewBox="0 0 100 100" fill={c}><path d="M50 5 C 80 5 95 30 95 55 C 95 85 70 95 50 95 C 25 95 5 80 5 55 C 5 30 20 5 50 5 Z" /></svg>;
-  if (kind === 'lightning') return <svg width="50%" height="80%" viewBox="0 0 60 100" fill={c}><path d="M35 0 L 0 56 H 26 L 18 100 L 60 38 H 32 Z" /></svg>;
-  if (kind === 'leaf') return <svg width="70%" height="70%" viewBox="0 0 100 100" fill={c}><path d="M10 90 C 10 40 40 10 90 10 C 90 60 60 90 10 90 Z" /><path d="M10 90 L 60 40" stroke="rgba(0,0,0,0.18)" strokeWidth="3" fill="none" /></svg>;
-  if (kind === 'ice') return <svg width="70%" height="70%" viewBox="0 0 100 100" fill="none" stroke={c} strokeWidth="4" strokeLinecap="round"><path d="M50 8v84M22 28l56 44M22 72l56-44M8 50h84" /></svg>;
-  return <svg width="70%" height="70%" viewBox="0 0 100 100" fill="none" stroke={c} strokeWidth="6"><circle cx="50" cy="50" r="38" /></svg>;
-}
-
-function Shop() {
-  const items = [
-    { name: 'Streak freeze', type: 'Booster', price: 200, bg: 'linear-gradient(135deg,#bcdcfe,#7ea7d8)', shape: 'ice' },
-    { name: 'Ember flame', type: 'Cosmetic', price: 450, bg: 'linear-gradient(135deg,#ffb774,#c75a2a)', shape: 'flame' },
-    { name: 'Moss avatar', type: 'Cosmetic', price: 300, bg: 'linear-gradient(135deg,#b7c98a,#6f8a3a)', shape: 'blob' },
-    { name: '2× hour', type: 'Booster', price: 600, bg: 'linear-gradient(135deg,#e8d97e,#a87a2a)', shape: 'lightning' },
-    { name: 'Forest theme', type: 'Cosmetic', price: 800, bg: 'linear-gradient(135deg,#2e5a3a,#1c2418)', shape: 'ring' },
-    { name: 'Custom challenge', type: 'Booster', price: 350, bg: 'linear-gradient(135deg,#ed9a7a,#c75a2a)', shape: 'blob' },
-    { name: 'Tree planted', type: 'Real-world', price: 1200, bg: 'linear-gradient(135deg,#6f8a3a,#2e5a3a)', shape: 'leaf' },
-    { name: 'Badge frame', type: 'Cosmetic', price: 250, bg: 'linear-gradient(135deg,#efe9d7,#c8b88a)', shape: 'ring' },
-  ];
-  return (
-    <section className="section shop-section" id="shop">
-      <div className="wrap">
-        <div className="shop-head">
-          <div className="eyebrow" style={{ marginBottom: 18 }}>§ 06 — Spend your points</div>
-          <h2 className="display">Cosmetics, boosters,<br /><em>real-world good</em>.</h2>
-          <p>Points are an in-app currency, not vapor. The ledger is immutable from day one; sink and source are tracked globally so the economy never inflates.</p>
-        </div>
-        <div className="shop-grid">
-          {items.map((it) => (
-            <div className="shop-card" key={it.name}>
-              <div className="shop-card-art" style={{ background: it.bg }}><ShopShape kind={it.shape} /></div>
-              <div className="name">{it.name}</div>
-              <div className="type">{it.type}</div>
-              <div className="price">
-                <div className="p">{it.price.toLocaleString()}<span style={{ fontSize: 11, fontFamily: 'var(--mono)', marginLeft: 4, color: 'var(--mute)', letterSpacing: '.12em' }}>PTS</span></div>
-                <button className="b">Buy</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function CTA() {
   return (
     <section className="section cta">
@@ -590,7 +542,6 @@ export default function LandingPage() {
       <EcoScoreSection />
       <TaskLoop />
       <Friends />
-      <Shop />
       <CTA />
       <BigMark />
       <Footer />

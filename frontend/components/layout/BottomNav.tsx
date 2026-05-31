@@ -9,7 +9,6 @@ const navItems = [
   { href: '/tasks', label: 'Tasks' },
   { href: '/eco-score', label: 'Eco score' },
   { href: '/friends', label: 'Friends' },
-  { href: '/shop', label: 'Shop' },
   { href: '/profile', label: 'Profile' },
 ];
 

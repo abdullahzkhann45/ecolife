@@ -7,7 +7,6 @@ export enum LedgerEventType {
   TASK_COMPLETION = 'task_completion',
   STREAK_MILESTONE = 'streak_milestone',
   FIRST_CATEGORY_BONUS = 'first_category_bonus',
-  PURCHASE = 'purchase',
   DAILY_CAP_REACHED = 'daily_cap_reached',
 }
 
@@ -24,9 +23,6 @@ export class PointsLedger {
 
   @Prop({ type: Types.ObjectId, ref: 'TaskSubmission', default: null })
   taskSubmissionId: Types.ObjectId;
-
-  @Prop({ type: Types.ObjectId, ref: 'ShopItem', default: null })
-  shopItemId: Types.ObjectId;
 
   @Prop({ required: true })
   description: string;
